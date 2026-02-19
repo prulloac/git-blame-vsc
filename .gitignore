@@ -2,7 +2,7 @@
 node_modules/
 dist/
 build/
-*.js
+out/
 *.js.map
 *.d.ts
 .tsbuildinfo
@@ -40,7 +40,6 @@ env/
 .env
 
 # IDE & Editor
-.vscode/
 .idea/
 *.swp
 *.swo
