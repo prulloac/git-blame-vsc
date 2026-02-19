@@ -1,6 +1,5 @@
 ---
 description: Sync local and remote git repositories with conflict resolution
-agent: agent
 ---
 
 Your task is to sync the local git repository with the remote for the current branch: !git branch --show-current
