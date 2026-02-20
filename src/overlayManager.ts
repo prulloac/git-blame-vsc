@@ -85,8 +85,8 @@ export class OverlayManager {
 		this.activeEditor = editor;
 		this.currentLine = line;
 
-		// Use blame text if provided, otherwise use sample text
-		const displayText = blameText ? `${blameText}` : `[Sample: Line ${line + 1}]`;
+		// Use blame text if provided, otherwise use empty string
+		const displayText = blameText ? `${blameText}` : '';
 
 		// Create range for the end of the line
 		const lineLength = editor.document.lineAt(line).text.length;

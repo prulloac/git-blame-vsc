@@ -25,45 +25,53 @@ function getOverlayConfig(): OverlayConfig {
 }
 
 /**
- * Initialize git API access
+ * Get blame formatting configuration
  */
-async function initializeGitAPI(): Promise<BlameProvider | null> {
+function getBlameFormatConfig(): { pattern: string; maxMessageLength: number } {
+	const config = vscode.workspace.getConfiguration('gitBlameOverlay');
+	return {
+		pattern: config.get('outputPattern', '[<hash>] <author> (<date>): <message>'),
+		maxMessageLength: config.get('maxMessageLength', 24),
+	};
+}
+
+/**
+ * Initialize git blame provider
+ */
+async function initializeBlameProvider(): Promise<BlameProvider | null> {
 	try {
-		const gitExtension = vscode.extensions.getExtension('vscode.git');
-		if (!gitExtension) {
-			console.log('Git extension not found');
-			return null;
-		}
-
-		if (!gitExtension.isActive) {
-			await gitExtension.activate();
-		}
-
-		const gitAPI = gitExtension.exports.getAPI(1);
-		if (!gitAPI) {
-			console.log('Git API not available');
-			return null;
-		}
-
-		return new BlameProvider(gitAPI);
+		// Just create the blame provider - it uses git command directly
+		return new BlameProvider();
 	} catch (error) {
-		console.error('Failed to initialize git API:', error);
+		console.error('Failed to initialize blame provider:', error);
 		return null;
 	}
 }
 
 /**
- * Format blame information into a concise one-liner
+ * Format blame information using configurable pattern
  */
-function formatBlameText(author: string, message: string, hash: string, date: string): string {
-	// Truncate message to fit reasonably in editor
-	const maxLen = 60;
-	const truncatedMsg = message.length > maxLen ? message.substring(0, maxLen) + '...' : message;
+function formatBlameText(blameInfo: { author: string; authorEmail: string; authorShort: string; message: string; hash: string; date: string }): string {
+	const { pattern, maxMessageLength } = getBlameFormatConfig();
 	
 	// Extract just the date part (YYYY-MM-DD)
-	const dateOnly = date.split(' ')[0];
+	const dateOnly = blameInfo.date.split(' ')[0];
 	
-	return `[${hash} ${author} ${dateOnly}] ${truncatedMsg}`;
+	// Truncate message if needed
+	const truncatedMsg = blameInfo.message.length > maxMessageLength 
+		? blameInfo.message.substring(0, maxMessageLength) + '...' 
+		: blameInfo.message;
+	
+	// Replace pattern variables with actual values
+	let output = pattern
+		.replace(/<hash>/g, blameInfo.hash)
+		.replace(/<author>/g, blameInfo.author)
+		.replace(/<authorShort>/g, blameInfo.authorShort)
+		.replace(/<authorEmail>/g, blameInfo.authorEmail)
+		.replace(/<date>/g, dateOnly)
+		.replace(/<message>/g, truncatedMsg);
+	
+	return output;
 }
 
 // This method is called when your extension is activated
@@ -78,9 +86,9 @@ export async function activate(context: vscode.ExtensionContext) {
 	overlayManager = new OverlayManager(getOverlayConfig());
 
 	// Initialize BlameProvider
-	blameProvider = await initializeGitAPI();
+	blameProvider = await initializeBlameProvider();
 	if (!blameProvider) {
-		console.log('Git blame feature unavailable - git extension not loaded');
+		console.log('Git blame feature unavailable');
 	}
 
 	// Register the helloWorld command
@@ -108,12 +116,14 @@ export async function activate(context: vscode.ExtensionContext) {
 		if (blameProvider && editor.document.uri.scheme === 'file') {
 			blameProvider.getBlameForLine(editor.document.fileName, line).then((blameInfo) => {
 				if (blameInfo && overlayManager) {
-					const blameText = formatBlameText(
-						blameInfo.author,
-						blameInfo.message || '(no message)',
-						blameInfo.hash,
-						blameInfo.date
-					);
+					const blameText = formatBlameText({
+						author: blameInfo.author,
+						authorEmail: blameInfo.authorEmail,
+						authorShort: blameInfo.authorShort,
+						message: blameInfo.message || '(no message)',
+						hash: blameInfo.hash,
+						date: blameInfo.date
+					});
 					overlayManager.showOverlay(line, editor, blameText);
 				} else if (overlayManager) {
 					// Fallback to sample text if blame info unavailable
