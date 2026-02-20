@@ -2,14 +2,26 @@ import * as vscode from 'vscode';
 
 /**
  * Configuration for the overlay appearance and behavior
+ * Colors can be hex strings (e.g., '#FFD700') or undefined to use theme defaults
  */
 export interface OverlayConfig {
-	backgroundColor: string;
-	textColor: string;
-	borderColor: string;
+	backgroundColor: string | undefined;
+	textColor: string | undefined;
+	borderColor: string | undefined;
 	fontWeight: string;
-	fontSize: string;
 	marginLeft: string;
+}
+
+/**
+ * Resolves a color to either a hex string or ThemeColor
+ */
+function resolveColor(colorValue: string | undefined, themeColorId: string): string | vscode.ThemeColor {
+	if (colorValue && colorValue.startsWith('#')) {
+		// User provided a hex color
+		return colorValue;
+	}
+	// Use theme color
+	return new vscode.ThemeColor(themeColorId);
 }
 
 /**
@@ -36,8 +48,8 @@ export class OverlayManager {
 			after: {
 				contentText: '',
 				margin: `0 0 0 ${config.marginLeft}`,
-				backgroundColor: config.backgroundColor,
-				color: config.textColor,
+				backgroundColor: resolveColor(config.backgroundColor, 'editor.background'),
+				color: resolveColor(config.textColor, 'editor.foreground'),
 				fontWeight: config.fontWeight as any,
 			},
 			isWholeLine: false,
@@ -73,6 +85,9 @@ export class OverlayManager {
 			new vscode.Position(line, lineLength)
 		);
 
+		// Resolve border color - use a dimmed version of the theme color
+		const borderColor = resolveColor(this.config.borderColor, 'editorBracketMatch.border');
+
 		// Apply decoration with the sample text
 		const decoration: vscode.DecorationOptions = {
 			range: range,
@@ -80,10 +95,10 @@ export class OverlayManager {
 				after: {
 					contentText: sampleText,
 					margin: `0 0 0 ${this.config.marginLeft}`,
-					backgroundColor: this.config.backgroundColor,
-					color: this.config.textColor,
+					backgroundColor: resolveColor(this.config.backgroundColor, 'editor.background'),
+					color: resolveColor(this.config.textColor, 'editor.foreground'),
 					fontWeight: this.config.fontWeight as any,
-					border: `1px solid ${this.config.borderColor}`,
+					border: `1px solid ${borderColor}`,
 				},
 			},
 		};

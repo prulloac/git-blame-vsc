@@ -7,15 +7,15 @@ let overlayManager: OverlayManager | null = null;
 
 /**
  * Get current configuration from VS Code settings
+ * Returns undefined for color settings to use theme defaults unless user explicitly set a value
  */
 function getOverlayConfig(): OverlayConfig {
 	const config = vscode.workspace.getConfiguration('gitBlameOverlay');
 	return {
-		backgroundColor: config.get('backgroundColor', '#FFD700'),
-		textColor: config.get('textColor', '#000000'),
-		borderColor: config.get('borderColor', '#FFA500'),
+		backgroundColor: config.get<string>('backgroundColor'),
+		textColor: config.get<string>('textColor'),
+		borderColor: config.get<string>('borderColor'),
 		fontWeight: config.get('fontWeight', 'bold'),
-		fontSize: config.get('fontSize', '0.85em'),
 		marginLeft: config.get('marginLeft', '1rem'),
 	};
 }
