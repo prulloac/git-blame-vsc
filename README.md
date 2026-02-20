@@ -1,61 +1,71 @@
-# Git Blame VSC
+# git-blame-vsc README
 
-![GitHub stars](https://img.shields.io/github/stars/prulloac/git-blame-vsc)
-![GitHub issues](https://img.shields.io/github/issues/prulloac/git-blame-vsc)
-
-A lightweight Visual Studio Code extension that helps you see an inline git blame summary directly on the editor. It provides real-time commit metadata (author, date, summary) for the current line you are editing.
+This is the README for your extension "git-blame-vsc". After writing up a brief description, we recommend including the following sections.
 
 ## Features
 
-- **Inline Git Blame**: Displays commit information at the end of the current line.
-- **Commit Metadata**: See the author, timestamp, and commit message (summary) at a glance.
-- **Language Agnostic**: Works across all languages supported by VS Code's editor.
-- **Lightweight**: Optimized for performance and minimal editor distraction.
+Describe specific features of your extension including screenshots of your extension in action. Image paths are relative to this README file.
 
-## Installation
+For example if there is an image subfolder under your extension project workspace:
 
-### Prerequisites
+\!\[feature X\]\(images/feature-x.png\)
 
-- [Visual Studio Code](https://code.visualstudio.com/) (v1.85.0 or later)
-- [Git](https://git-scm.com/) installed on your local machine.
+> Tip: Many popular extensions utilize animations. This is an excellent way to show off your extension! We recommend short, focused animations that are easy to follow.
 
-### Quick Start
+## Requirements
 
-```bash
-# Clone the repository
-git clone https://github.com/prulloac/git-blame-vsc.git
-cd git-blame-vsc
+If you have any requirements or dependencies, add a section describing those and how to install and configure them.
 
-# Install dependencies (once package.json is initialized)
-npm install
-```
+## Extension Settings
 
-## Usage
+Include if your extension adds any VS Code settings through the `contributes.configuration` extension point.
 
-Once installed and activated, simply move your cursor to any line in a file that is part of a Git repository. A subtle inline message will appear at the end of the line showing the last commit information.
+For example:
 
-### Examples
+This extension contributes the following settings:
 
-| Display Inline | Commit Summary |
-|---|---|
-| `const x = 10; // Pablo Ulloa, 2 hours ago • Updated constant` | Full commit history available via the VS Code command palette. |
+* `myExtension.enable`: Enable/disable this extension.
+* `myExtension.thing`: Set to `blah` to do something.
 
-## Configuration
+## Known Issues
 
-Settings can be customized in `.vscode/settings.json`:
+Calling out known issues can help limit users opening duplicate issues against your extension.
 
-- `gitBlameVsc.enabled`: Toggle the inline summary on/off.
-- `gitBlameVsc.template`: Customize the inline text format.
+## Release Notes
 
-## Contributing
+Users appreciate release notes as you update your extension.
 
-Contributions are welcome! Please read the `CONTRIBUTING.md` (coming soon) for details on our code of conduct and the process for submitting pull requests.
+### 1.0.0
 
-## License
+Initial release of ...
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+### 1.0.1
 
-## Acknowledgments
+Fixed issue #.
 
-- [VS Code Extension API](https://code.visualstudio.com/api)
-- [Git CLI](https://git-scm.com/docs)
+### 1.1.0
+
+Added features X, Y, and Z.
+
+---
+
+## Following extension guidelines
+
+Ensure that you've read through the extensions guidelines and follow the best practices for creating your extension.
+
+* [Extension Guidelines](https://code.visualstudio.com/api/references/extension-guidelines)
+
+## Working with Markdown
+
+You can author your README using Visual Studio Code. Here are some useful editor keyboard shortcuts:
+
+* Split the editor (`Cmd+\` on macOS or `Ctrl+\` on Windows and Linux).
+* Toggle preview (`Shift+Cmd+V` on macOS or `Shift+Ctrl+V` on Windows and Linux).
+* Press `Ctrl+Space` (Windows, Linux, macOS) to see a list of Markdown snippets.
+
+## For more information
+
+* [Visual Studio Code's Markdown Support](http://code.visualstudio.com/docs/languages/markdown)
+* [Markdown Syntax Reference](https://help.github.com/articles/markdown-basics/)
+
+**Enjoy!**
