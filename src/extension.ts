@@ -16,6 +16,8 @@ function getOverlayConfig(): OverlayConfig {
 		textColor: config.get<string>('textColor'),
 		borderColor: config.get<string>('borderColor'),
 		fontWeight: config.get('fontWeight', 'bold'),
+		fontStyle: config.get('fontStyle', 'italic') as 'normal' | 'italic',
+		opacity: config.get('opacity', 0.6),
 		marginLeft: config.get('marginLeft', '1rem'),
 	};
 }

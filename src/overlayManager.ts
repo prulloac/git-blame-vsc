@@ -9,18 +9,23 @@ export interface OverlayConfig {
 	textColor: string | undefined;
 	borderColor: string | undefined;
 	fontWeight: string;
+	fontStyle: 'normal' | 'italic';
+	opacity: number;
 	marginLeft: string;
 }
 
 /**
- * Resolves a color to either a hex string or ThemeColor
+ * Resolves a color to either a hex string (with optional opacity) or ThemeColor
  */
-function resolveColor(colorValue: string | undefined, themeColorId: string): string | vscode.ThemeColor {
+function resolveColor(colorValue: string | undefined, themeColorId: string, opacity?: number): string | vscode.ThemeColor {
+	const opacityHex = opacity !== undefined ? Math.round(opacity * 255).toString(16).padStart(2, '0') : 'ff';
+	
 	if (colorValue && colorValue.startsWith('#')) {
-		// User provided a hex color
-		return colorValue;
+		// User provided a hex color - add opacity
+		const hexColor = colorValue.length === 7 ? colorValue : colorValue.substring(0, 7);
+		return `${hexColor}${opacityHex}`;
 	}
-	// Use theme color
+	// Use theme color with opacity
 	return new vscode.ThemeColor(themeColorId);
 }
 
@@ -49,8 +54,9 @@ export class OverlayManager {
 				contentText: '',
 				margin: `0 0 0 ${config.marginLeft}`,
 				backgroundColor: resolveColor(config.backgroundColor, 'editor.background'),
-				color: resolveColor(config.textColor, 'editor.foreground'),
+				color: resolveColor(config.textColor, 'editor.foreground', config.opacity),
 				fontWeight: config.fontWeight as any,
+				fontStyle: config.fontStyle,
 			},
 			isWholeLine: false,
 		});
@@ -96,8 +102,9 @@ export class OverlayManager {
 					contentText: sampleText,
 					margin: `0 0 0 ${this.config.marginLeft}`,
 					backgroundColor: resolveColor(this.config.backgroundColor, 'editor.background'),
-					color: resolveColor(this.config.textColor, 'editor.foreground'),
+					color: resolveColor(this.config.textColor, 'editor.foreground', this.config.opacity),
 					fontWeight: this.config.fontWeight as any,
+					fontStyle: this.config.fontStyle,
 					border: `1px solid ${borderColor}`,
 				},
 			},

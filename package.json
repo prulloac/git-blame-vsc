@@ -45,6 +45,19 @@
           "default": "bold",
           "description": "Font weight for overlay text"
         },
+        "gitBlameOverlay.fontStyle": {
+          "type": "string",
+          "enum": ["normal", "italic"],
+          "default": "italic",
+          "description": "Font style for overlay text. Use 'italic' for subtle styling."
+        },
+        "gitBlameOverlay.opacity": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "default": 0.6,
+          "description": "Text opacity (0 = transparent, 1 = fully opaque). Lower values make text less prominent."
+        },
         "gitBlameOverlay.marginLeft": {
           "type": "string",
           "default": "1rem",
