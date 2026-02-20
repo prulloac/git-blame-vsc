@@ -77,12 +77,16 @@ export class OverlayManager {
 
 	/**
 	 * Show overlay on the given line in the active editor
+	 * @param line - The line number to show the overlay on
+	 * @param editor - The editor to show the overlay in
+	 * @param blameText - Optional blame information to display (replaces sample text)
 	 */
-	public showOverlay(line: number, editor: vscode.TextEditor): void {
+	public showOverlay(line: number, editor: vscode.TextEditor, blameText?: string): void {
 		this.activeEditor = editor;
 		this.currentLine = line;
 
-		const sampleText = `[Sample: Line ${line + 1}]`;
+		// Use blame text if provided, otherwise use sample text
+		const displayText = blameText ? `${blameText}` : `[Sample: Line ${line + 1}]`;
 
 		// Create range for the end of the line
 		const lineLength = editor.document.lineAt(line).text.length;
@@ -94,12 +98,12 @@ export class OverlayManager {
 		// Resolve border color - use a dimmed version of the theme color
 		const borderColor = resolveColor(this.config.borderColor, 'editorBracketMatch.border');
 
-		// Apply decoration with the sample text
+		// Apply decoration with the text
 		const decoration: vscode.DecorationOptions = {
 			range: range,
 			renderOptions: {
 				after: {
-					contentText: sampleText,
+					contentText: displayText,
 					margin: `0 0 0 ${this.config.marginLeft}`,
 					backgroundColor: resolveColor(this.config.backgroundColor, 'editor.background'),
 					color: resolveColor(this.config.textColor, 'editor.foreground', this.config.opacity),
