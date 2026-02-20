@@ -62,6 +62,17 @@
           "type": "string",
           "default": "1rem",
           "description": "Left margin spacing before overlay text"
+        },
+        "gitBlameOverlay.outputPattern": {
+          "type": "string",
+          "default": "[<hash>] <author> (<date>): <message>",
+          "description": "Pattern for the blame output string. Available variables: <hash>, <author>, <authorShort>, <authorEmail>, <date>, <message>. Examples: '[<hash>] <author> (<date>): <message>' or '<authorShort>: <message>' or '<author> <authorEmail>'"
+        },
+        "gitBlameOverlay.maxMessageLength": {
+          "type": "number",
+          "minimum": 1,
+          "default": 24,
+          "description": "Maximum length of the commit message in the output (characters)"
         }
       }
     }
