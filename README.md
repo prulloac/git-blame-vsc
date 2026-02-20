@@ -1,71 +1,116 @@
-# git-blame-vsc README
+# git-blame-vsc
 
-This is the README for your extension "git-blame-vsc". After writing up a brief description, we recommend including the following sections.
+A lightweight VS Code extension that displays an overlay on the current line when you click in the editor. The overlay automatically adapts to your editor's theme colors but can be customized to match your preferences.
 
 ## Features
 
-Describe specific features of your extension including screenshots of your extension in action. Image paths are relative to this README file.
-
-For example if there is an image subfolder under your extension project workspace:
-
-\!\[feature X\]\(images/feature-x.png\)
-
-> Tip: Many popular extensions utilize animations. This is an excellent way to show off your extension! We recommend short, focused animations that are easy to follow.
-
-## Requirements
-
-If you have any requirements or dependencies, add a section describing those and how to install and configure them.
+- **Click-to-overlay**: Click any line in the editor to display an overlay showing the line number
+- **Theme-aware styling**: Colors automatically adapt to your VS Code theme (light or dark)
+- **Fully customizable**: Configure background color, text color, border color, font weight, and spacing
+- **Real-time updates**: Settings changes apply immediately to active overlays
+- **Clear command**: Easily remove overlays with the "Clear Line Overlay" command
 
 ## Extension Settings
 
-Include if your extension adds any VS Code settings through the `contributes.configuration` extension point.
+This extension contributes the following configurable settings:
 
-For example:
+* `gitBlameOverlay.backgroundColor`: Background color of the overlay (hex color, e.g., `#FFD700`). Defaults to editor background color if not set.
+* `gitBlameOverlay.textColor`: Text color of the overlay content (hex color, e.g., `#000000`). Defaults to editor foreground color if not set.
+* `gitBlameOverlay.borderColor`: Border color of the overlay (hex color, e.g., `#FFA500`). Defaults to editor accent color if not set.
+* `gitBlameOverlay.fontWeight`: Font weight for overlay text. Options: `normal`, `bold`, `lighter`, `900`. Default: `bold`.
+* `gitBlameOverlay.marginLeft`: Left margin spacing before overlay text. Default: `1rem`.
 
-This extension contributes the following settings:
+### Example Configuration
 
-* `myExtension.enable`: Enable/disable this extension.
-* `myExtension.thing`: Set to `blah` to do something.
+Add this to your VS Code `settings.json` to customize the overlay appearance:
+
+```json
+{
+  "gitBlameOverlay.backgroundColor": "#FFD700",
+  "gitBlameOverlay.textColor": "#000000",
+  "gitBlameOverlay.borderColor": "#FFA500",
+  "gitBlameOverlay.fontWeight": "bold",
+  "gitBlameOverlay.marginLeft": "1rem"
+}
+```
+
+Or use VS Code's Settings UI (Settings > Git Blame Overlay) to configure these options visually.
+
+## Testing the Extension
+
+### Option 1: Debug Mode (Recommended)
+
+For interactive testing with hot reload:
+
+```bash
+npm run watch
+```
+
+Then in VS Code, press `F5` to launch the extension in debug mode. This opens a new VS Code window with your extension active.
+
+**Features in debug mode:**
+- Changes to source files auto-compile as you edit
+- Press `Ctrl+R` (Cmd+R on macOS) in the extension window to reload
+- View extension logs in the Debug Console
+- Set breakpoints and step through code
+
+### Option 2: Run Tests
+
+For automated testing:
+
+```bash
+npm test
+```
+
+This runs the extension test suite.
+
+### Testing the Overlay Feature
+
+Once the extension is running:
+
+1. **Basic overlay test**: Click any line in an editor - you should see `[Sample: Line N]` appear at the end of the line
+2. **Theme color test**: The overlay should automatically match your editor's colors. Try switching between light and dark themes to see the colors adapt
+3. **Custom colors test**: 
+   - Open Settings (Cmd+, or Ctrl+,)
+   - Search for "Git Blame Overlay"
+   - Change a color setting and watch the overlay update in real-time
+4. **Clear command test**: 
+   - Open Command Palette (Cmd+Shift+P or Ctrl+Shift+P)
+   - Run "Clear Line Overlay" - the overlay should disappear
+5. **Configuration reload test**: Change a setting while an overlay is visible - it should update immediately
+
+## Development
+
+### Build
+```bash
+npm run compile
+```
+
+### Watch for changes
+```bash
+npm run watch
+```
+
+### Lint
+```bash
+npm run lint
+```
 
 ## Known Issues
 
-Calling out known issues can help limit users opening duplicate issues against your extension.
+- The extension currently displays a sample overlay. Future versions will integrate with git blame information.
 
 ## Release Notes
 
-Users appreciate release notes as you update your extension.
+### 0.0.1
 
-### 1.0.0
-
-Initial release of ...
-
-### 1.0.1
-
-Fixed issue #.
-
-### 1.1.0
-
-Added features X, Y, and Z.
+Initial release with configurable overlay feature
+- Theme-aware color defaults
+- Customizable appearance settings
+- Click-to-display overlay functionality
+- Clear overlay command
 
 ---
 
-## Following extension guidelines
+Enjoy!
 
-Ensure that you've read through the extensions guidelines and follow the best practices for creating your extension.
-
-* [Extension Guidelines](https://code.visualstudio.com/api/references/extension-guidelines)
-
-## Working with Markdown
-
-You can author your README using Visual Studio Code. Here are some useful editor keyboard shortcuts:
-
-* Split the editor (`Cmd+\` on macOS or `Ctrl+\` on Windows and Linux).
-* Toggle preview (`Shift+Cmd+V` on macOS or `Shift+Ctrl+V` on Windows and Linux).
-* Press `Ctrl+Space` (Windows, Linux, macOS) to see a list of Markdown snippets.
-
-## For more information
-
-* [Visual Studio Code's Markdown Support](http://code.visualstudio.com/docs/languages/markdown)
-* [Markdown Syntax Reference](https://help.github.com/articles/markdown-basics/)
-
-**Enjoy!**
