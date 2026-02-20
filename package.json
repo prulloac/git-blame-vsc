@@ -23,7 +23,43 @@
         "command": "git-blame-vsc.clearOverlay",
         "title": "Clear Line Overlay"
       }
-    ]
+    ],
+    "configuration": {
+      "title": "Git Blame Overlay",
+      "properties": {
+        "gitBlameOverlay.backgroundColor": {
+          "type": "string",
+          "default": "#FFD700",
+          "description": "Background color of the overlay text"
+        },
+        "gitBlameOverlay.textColor": {
+          "type": "string",
+          "default": "#000000",
+          "description": "Text color of the overlay content"
+        },
+        "gitBlameOverlay.borderColor": {
+          "type": "string",
+          "default": "#FFA500",
+          "description": "Border color of the overlay"
+        },
+        "gitBlameOverlay.fontWeight": {
+          "type": "string",
+          "enum": ["normal", "bold", "lighter", "900"],
+          "default": "bold",
+          "description": "Font weight for overlay text"
+        },
+        "gitBlameOverlay.fontSize": {
+          "type": "string",
+          "default": "0.85em",
+          "description": "Font size for overlay text (e.g., '0.85em', '12px')"
+        },
+        "gitBlameOverlay.marginLeft": {
+          "type": "string",
+          "default": "1rem",
+          "description": "Left margin spacing before overlay text"
+        }
+      }
+    }
   },
   "scripts": {
     "vscode:prepublish": "npm run compile",
