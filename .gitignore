@@ -70,3 +70,6 @@ Thumbs.db
 # Project specific
 .env.local
 .env.*.local
+
+# Extension specific
+*.vsix
