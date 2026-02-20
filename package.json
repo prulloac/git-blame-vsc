@@ -1,7 +1,12 @@
 {
   "name": "git-blame-vsc",
-  "displayName": "git-blame-vsc",
-  "description": "lightweight git blame overlay",
+  "displayName": "Lightweight Git Blame Overlay",
+  "description": "Lightweight git blame overlay",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/prulloac/git-blame-vsc.git"
+  },
+  "publisher": "prulloac",
   "version": "0.0.1",
   "engines": {
     "vscode": "^1.109.0"
