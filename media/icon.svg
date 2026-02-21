@@ -1,19 +1,23 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256">
-  <!-- Black background circle -->
-  <circle cx="128" cy="128" r="128" fill="#000000"/>
-  
-  <!-- Cat head silhouette (white) -->
-  <g fill="#ffffff">
-    <!-- Main head circle -->
-    <circle cx="128" cy="130" r="60"/>
-    
-    <!-- Left ear (wider, rounded) -->
-    <path d="M 95 85 Q 80 70 85 40 Q 95 60 105 75 Z"/>
-    
-    <!-- Right ear (wider, rounded) -->
-    <path d="M 161 85 Q 176 70 171 40 Q 161 60 151 75 Z"/>
-  </g>
-  
-  <!-- White snout/face area for depth -->
-  <ellipse cx="128" cy="145" ry="25" rx="30" fill="#ffffff" opacity="0.9"/>
+<svg width="600" height="600" xmlns="http://www.w3.org/2000/svg">
+ <defs>
+  <radialGradient r="0.5" cy="0.5" cx="0.5" spreadMethod="pad" id="svg_21">
+   <stop offset="0.28906" stop-color="#c49b35"/>
+   <stop offset="1" stop-opacity="0.99609" stop-color="#000000"/>
+  </radialGradient>
+ </defs>
+ <g>
+  <title>Layer 1</title>
+  <ellipse transform="rotate(0.265666 300 299)" stroke="#000" ry="300" rx="300" id="svg_1" cy="299" cx="300" fill="#191919"/>
+  <ellipse stroke="#000" ry="166.1862" rx="207.92003" id="svg_2" cy="335.01378" cx="303.92004" fill="#ffffff"/>
+  <path stroke="#9e9e06" stroke-opacity="0" id="svg_3" d="m121.49778,271.55888l0.12363,-150.73683l131.437,83.8813l-131.56063,66.85554z" fill="#ffffff"/>
+  <path stroke="#9e9e06" stroke-opacity="0" id="svg_4" d="m349.92873,213.52289l123.59755,-94.08173l13.38005,150.19674l-136.9776,-56.11501z" fill="#ffffff"/>
+  <ellipse ry="34.5" rx="11.5" id="svg_7" cy="211.09999" cx="307.49999" stroke-opacity="0" stroke="#9e9e06" fill="#000000"/>
+  <ellipse ry="34.5" rx="11.5" id="svg_9" cy="216.09999" cx="292.49999" stroke-opacity="0" stroke="#9e9e06" fill="#000000"/>
+  <ellipse ry="34.5" rx="11.5" id="svg_10" cy="214.09999" cx="324.49999" stroke-opacity="0" stroke="#9e9e06" fill="#000000"/>
+  <ellipse transform="rotate(97.4115 85.5 347.1)" stroke="#9e9e06" ry="40.79654" rx="5.63881" id="svg_15" cy="347.09999" cx="85.49999" stroke-opacity="0" fill="#ffffff"/>
+  <ellipse transform="rotate(70.9949 92.74 388.845)" stroke="#9e9e06" ry="41.48586" rx="6.26338" id="svg_16" cy="388.84512" cx="92.74" stroke-opacity="0" fill="#ffffff"/>
+  <ellipse transform="rotate(97.4115 514.5 384.1)" stroke="#9e9e06" ry="40.79654" rx="5.63881" id="svg_17" cy="384.09999" cx="514.49999" stroke-opacity="0" fill="#ffffff"/>
+  <ellipse transform="rotate(70.9949 517.74 335.845)" stroke="#9e9e06" ry="41.48586" rx="6.26338" id="svg_18" cy="335.84512" cx="517.74" stroke-opacity="0" fill="#ffffff"/>
+  <ellipse stroke="#9e9e06" ry="22.5" rx="8.5" id="svg_19" cy="209.1" cx="306.49999" stroke-opacity="0" fill="url(#svg_21)"/>
+ </g>
 </svg>
