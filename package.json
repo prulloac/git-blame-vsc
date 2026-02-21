@@ -7,8 +7,9 @@
     "url": "https://github.com/prulloac/git-blame-vsc.git"
   },
   "publisher": "prulloac",
-  "version": "0.0.1",
-  "icon": "media/icon.svg",
+  "version": "0.0.2",
+  "icon": "media/icon.png",
+  "license": "MIT",
   "keywords": [
     "git",
     "blame",
