@@ -7,11 +7,11 @@
     <!-- Main head circle -->
     <circle cx="128" cy="130" r="60"/>
     
-    <!-- Left ear -->
-    <path d="M 95 85 L 85 40 L 105 75 Z"/>
+    <!-- Left ear (wider, rounded) -->
+    <path d="M 95 85 Q 80 70 85 40 Q 95 60 105 75 Z"/>
     
-    <!-- Right ear -->
-    <path d="M 161 85 L 171 40 L 151 75 Z"/>
+    <!-- Right ear (wider, rounded) -->
+    <path d="M 161 85 Q 176 70 171 40 Q 161 60 151 75 Z"/>
   </g>
   
   <!-- White snout/face area for depth -->
