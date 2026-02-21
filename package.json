@@ -8,11 +8,20 @@
   },
   "publisher": "prulloac",
   "version": "0.0.1",
+  "icon": "media/icon.svg",
+  "keywords": [
+    "git",
+    "blame",
+    "overlay",
+    "history",
+    "annotation",
+    "vcs"
+  ],
   "engines": {
     "vscode": "^1.109.0"
   },
   "categories": [
-    "Other"
+    "SCM Providers"
   ],
   "activationEvents": [
     "onStartupFinished"

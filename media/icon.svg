@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256">
+  <!-- Background circle -->
+  <circle cx="128" cy="128" r="120" fill="#2563eb" opacity="0.1"/>
+  
+  <!-- Git branch icon -->
+  <g transform="translate(128, 128)">
+    <!-- Left branch -->
+    <circle cx="-40" cy="-30" r="8" fill="#2563eb"/>
+    <line x1="-40" y1="-22" x2="-40" y2="30" stroke="#2563eb" stroke-width="4"/>
+    
+    <!-- Right branch -->
+    <circle cx="40" cy="-30" r="8" fill="#2563eb"/>
+    <line x1="40" y1="-22" x2="40" y2="30" stroke="#2563eb" stroke-width="4"/>
+    
+    <!-- Center connection -->
+    <line x1="-40" y1="30" x2="40" y2="30" stroke="#2563eb" stroke-width="4"/>
+    
+    <!-- Bottom commit -->
+    <circle cx="0" cy="50" r="10" fill="#2563eb" stroke="#fff" stroke-width="2"/>
+    
+    <!-- Blame text indicator -->
+    <text x="0" y="-50" font-size="24" font-weight="bold" fill="#2563eb" text-anchor="middle" font-family="monospace">blame</text>
+  </g>
+  
+  <!-- Border -->
+  <circle cx="128" cy="128" r="120" fill="none" stroke="#2563eb" stroke-width="2" opacity="0.3"/>
+</svg>
