@@ -6,9 +6,9 @@ The Status Bar Blame feature displays git blame information in the VS Code statu
 
 ## Status
 
-- **Status**: 🚧 Proposed (Not Yet Implemented)
-- **Target Version**: 0.1.0
-- **Effort Estimate**: 1-2 hours
+- **Status**: ✅ Implemented (v0.2.0)
+- **Version**: 0.2.0
+- **Since**: v0.2.0
 
 ## Feature Type
 

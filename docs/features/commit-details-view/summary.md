@@ -7,8 +7,8 @@ The Commit Details View feature provides developers with comprehensive commit in
 ## Status
 
 - **Status**: 🚧 Planned (Not Yet Implemented)
-- **Version**: Proposed for v0.0.3+
-- **Since**: Proposed in v0.0.2 planning phase
+- **Version**: Proposed for v0.3.0+
+- **Since**: Proposed in v0.2.0 planning phase
 
 ## Feature Type
 

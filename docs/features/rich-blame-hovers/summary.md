@@ -6,9 +6,9 @@ Rich Blame Hovers provides detailed git blame information in a hover tooltip whe
 
 ## Status
 
-- **Status**: 🚧 Proposed (Not Yet Implemented)
-- **Target Version**: 0.1.0
-- **Effort Estimate**: 2-3 hours
+- **Status**: ✅ Implemented (v0.2.0)
+- **Version**: 0.2.0
+- **Since**: v0.2.0
 
 ## Feature Type
 

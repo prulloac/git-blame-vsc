@@ -6,8 +6,8 @@ The Customizable Formatting feature allows users to design their own blame displ
 
 ## Status
 
-- **Status**: ✅ Current (v0.0.2)
-- **Version**: 0.0.2
+- **Status**: ✅ Current (v0.2.0)
+- **Version**: 0.2.0
 - **Since**: 0.0.1
 
 ## Feature Type

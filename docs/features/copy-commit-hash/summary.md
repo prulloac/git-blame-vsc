@@ -6,9 +6,9 @@ Provides a quick command to copy the git commit hash for the currently selected 
 
 ## Status
 
-- **Status**: 🚧 Proposed (Not Yet Implemented)
-- **Version**: Planned for v0.1.0
-- **Since**: N/A (proposed feature)
+- **Status**: ✅ Implemented (v0.2.0)
+- **Version**: 0.2.0
+- **Since**: v0.2.0
 
 ## Feature Type
 

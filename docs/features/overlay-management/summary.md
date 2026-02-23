@@ -6,8 +6,8 @@ The Overlay Management feature controls the complete lifecycle of git blame over
 
 ## Status
 
-- **Status**: ✅ Current (v0.0.2)
-- **Version**: 0.0.2
+- **Status**: ✅ Current (v0.2.0)
+- **Version**: 0.2.0
 - **Since**: 0.0.1
 
 ## Feature Type

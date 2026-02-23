@@ -7,7 +7,7 @@ The File Blame Annotations feature displays git blame information in the editor 
 ## Status
 
 - **Status**: 🚧 Planned (Not Yet Implemented)
-- **Target Version**: 0.1.0
+- **Target Version**: 0.3.0
 - **Estimated Effort**: 3-4 hours
 
 ## Feature Type
