@@ -387,9 +387,26 @@ npm run lint
 
 ## Release Notes
 
+### 0.2.0
+
+New features and enhancements:
+- **Copy Commit Hash**: Copy git commit hash to clipboard from context menu or command palette
+- **Status Bar Blame**: Optional always-visible blame info in the status bar (disabled by default)
+- **Rich Blame Hovers**: Hover over any line to see detailed commit information in a tooltip
+- **Configurable Hover Delay**: Control how long before hover tooltips appear (`hoverDelay` setting)
+- Documentation updates to reflect current implementation status
+
+### 0.0.2
+
+Enhanced customization and formatting:
+- Customizable output patterns with placeholders
+- Theme-aware styling with automatic color adaptation
+- Performance optimization with 30-second caching
+- Real-time configuration updates
+
 ### 0.0.1
 
-Initial release with git blame overlay feature
+Initial release with git blame overlay feature:
 - Git blame integration using VS Code git extension API
 - Theme-aware color defaults
 - Customizable appearance (colors, font, opacity, spacing)
