@@ -62,15 +62,18 @@ jobs:
             };
 
       - name: Create OpenCode prompt for feature name
+        env:
+          CLEAN_TITLE: ${{ steps.issue.outputs.clean_title }}
+          ISSUE_BODY: ${{ steps.issue.outputs.issue_body }}
         run: |
-          cat > /tmp/feature_name_prompt.txt << PROMPT_EOF
+          cat > /tmp/feature_name_prompt.txt << 'PROMPT_EOF'
           Generate a concise, kebab-case feature name (2-4 words max, lowercase, hyphen-separated) for the following feature:
-
-          Title: ${{ steps.issue.outputs.clean_title }}
+          
+          Title: ${CLEAN_TITLE}
           
           Description:
-          ${{ steps.issue.outputs.issue_body }}
-
+          ${ISSUE_BODY}
+          
           Requirements:
           - Maximum 4 words
           - Use kebab-case (lowercase with hyphens)
@@ -88,11 +91,15 @@ jobs:
           Respond with ONLY the feature name, nothing else. No quotes, no explanation.
           PROMPT_EOF
           
+          # Substitute environment variables into the file
+          envsubst < /tmp/feature_name_prompt.txt > /tmp/feature_name_prompt_final.txt
+          mv /tmp/feature_name_prompt_final.txt /tmp/feature_name_prompt.txt
+          
           # Debug: Verify file was created
           echo "=== Feature name prompt file created ==="
           ls -la /tmp/feature_name_prompt.txt
-          echo "=== Content preview ==="
-          head -n 10 /tmp/feature_name_prompt.txt
+          echo "=== Content preview (first 20 lines) ==="
+          head -n 20 /tmp/feature_name_prompt.txt
 
       - name: Generate concise feature name with OpenCode
         id: feature_name_generation
@@ -153,30 +160,41 @@ jobs:
           mkdir -p "docs/features/${{ steps.final_feature_name.outputs.feature_name }}"
 
       - name: Create OpenCode prompt file for feature summary
+        env:
+          ISSUE_TITLE: ${{ steps.issue.outputs.issue_title }}
+          ISSUE_BODY: ${{ steps.issue.outputs.issue_body }}
+          ISSUE_NUMBER: ${{ steps.issue.outputs.issue_number }}
+          FEATURE_NAME: ${{ steps.final_feature_name.outputs.feature_name }}
         run: |
-          cat > /tmp/opencode_prompt.txt << PROMPT_EOF
+          cat > /tmp/opencode_prompt.txt << 'PROMPT_EOF'
           You are an expert software architect tasked with creating a comprehensive feature summary.
           
           CRITICAL INSTRUCTIONS:
           1. Load the feature-summary skill from .agents/skills/feature-summary
           2. Use the skill to create a detailed feature summary document
-          3. The output MUST be saved to: docs/features/${{ steps.final_feature_name.outputs.feature_name }}/summary.md
+          3. The output MUST be saved to: docs/features/${FEATURE_NAME}/summary.md
           
           FEATURE INFORMATION:
           
-          Title: ${{ steps.issue.outputs.issue_title }}
+          Title: ${ISSUE_TITLE}
           
           Description:
-          ${{ steps.issue.outputs.issue_body }}
+          ${ISSUE_BODY}
           
-          SOURCE: GitHub Issue #${{ steps.issue.outputs.issue_number }}
+          SOURCE: GitHub Issue #${ISSUE_NUMBER}
           
           Please create a comprehensive feature summary following the feature-summary skill guidelines.
           PROMPT_EOF
           
+          # Substitute environment variables into the file
+          envsubst < /tmp/opencode_prompt.txt > /tmp/opencode_prompt_final.txt
+          mv /tmp/opencode_prompt_final.txt /tmp/opencode_prompt.txt
+          
           # Debug: Verify file was created
           echo "=== Feature summary prompt file created ==="
           ls -la /tmp/opencode_prompt.txt
+          echo "=== Content preview (first 30 lines) ==="
+          head -n 30 /tmp/opencode_prompt.txt
 
       - name: Run OpenCode feature-summary skill
         env:
