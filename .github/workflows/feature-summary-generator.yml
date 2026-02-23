@@ -96,7 +96,7 @@ jobs:
           # Try to generate feature name with OpenCode
           echo "Attempting to generate feature name with OpenCode..."
           
-          FEATURE_NAME=$(opencode run --file /tmp/feature_name_prompt.txt "execute the attached prompt" 2>&1 | tail -1 | tr -d '"' | tr -d "'" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9-]//g' | cut -c1-40)
+          FEATURE_NAME=$(opencode run --file /tmp/feature_name_prompt.txt "execute" 2>&1 | tail -1 | tr -d '"' | tr -d "'" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9-]//g' | cut -c1-40)
           
           # Validate the generated name
           if [ -z "$FEATURE_NAME" ] || [ ${#FEATURE_NAME} -lt 3 ]; then
