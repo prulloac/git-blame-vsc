@@ -36,6 +36,14 @@ jobs:
       - name: Install GitHub Copilot CLI
         run: |
           npm install -g @github/copilot
+
+      - name: Authenticate with GitHub Copilot
+        run: |
+          # The Copilot CLI requires the GITHUB_TOKEN to be set in the environment
+          echo "GITHUB_TOKEN=${{ secrets.GITHUB_TOKEN }}" >> $GITHUB_ENV
+          
+          # Also set GH_TOKEN as a fallback
+          echo "GH_TOKEN=${{ secrets.GITHUB_TOKEN }}" >> $GITHUB_ENV
           
       - name: Get issue details
         id: issue
