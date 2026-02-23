@@ -3,8 +3,28 @@ name: CI
 on:
   push:
     branches: [main, master]
+    paths-ignore:
+      - '.github/**'
+      - '.agents/**'
+      - '.opencode/**'
+      - 'docs/**'
+      - '**.md'
+      - 'LICENSE'
+      - '.gitignore'
+      - '.editorconfig'
+      - '.vscode/**'
   pull_request:
     branches: [main, master]
+    paths-ignore:
+      - '.github/**'
+      - '.agents/**'
+      - '.opencode/**'
+      - 'docs/**'
+      - '**.md'
+      - 'LICENSE'
+      - '.gitignore'
+      - '.editorconfig'
+      - '.vscode/**'
 
 permissions: read-all
 
