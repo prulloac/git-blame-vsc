@@ -33,9 +33,9 @@ jobs:
           node-version: '22'
           cache: 'npm'
 
-      - name: Install OpenCode CLI
+      - name: Install GitHub Copilot CLI
         run: |
-          npm install -g opencode-ai
+          npm install -g @github/copilot
           
       - name: Get issue details
         id: issue
@@ -61,7 +61,7 @@ jobs:
               issueBody: issue.body || ''
             };
 
-      - name: Create OpenCode prompt for feature name
+      - name: Create Copilot prompt for feature name
         env:
           CLEAN_TITLE: ${{ steps.issue.outputs.clean_title }}
           ISSUE_BODY: ${{ steps.issue.outputs.issue_body }}
@@ -101,14 +101,14 @@ jobs:
           echo "=== Content preview (first 20 lines) ==="
           head -n 20 /tmp/feature_name_prompt.txt
 
-      - name: Generate concise feature name with OpenCode
+      - name: Generate concise feature name with Copilot
         id: feature_name_generation
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          # Check if OpenCode is available
-          if ! command -v opencode &> /dev/null; then
-            echo "OpenCode CLI not found, skipping AI generation"
+          # Check if Copilot is available
+          if ! command -v copilot &> /dev/null; then
+            echo "Copilot CLI not found, skipping AI generation"
             exit 1
           fi
           
@@ -118,14 +118,14 @@ jobs:
             exit 1
           fi
           
-          # Try to generate feature name with OpenCode
-          echo "Attempting to generate feature name with OpenCode..."
+          # Try to generate feature name with Copilot
+          echo "Attempting to generate feature name with Copilot..."
           
-          FEATURE_NAME=$(opencode run --file /tmp/feature_name_prompt.txt 2>&1 | tail -1 | tr -d '"' | tr -d "'" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9-]//g' | cut -c1-40)
+          FEATURE_NAME=$(copilot -p "$(cat /tmp/feature_name_prompt.txt)" --silent --allow-all-tools 2>&1 | tail -1 | tr -d '"' | tr -d "'" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9-]//g' | cut -c1-40)
           
           # Validate the generated name
           if [ -z "$FEATURE_NAME" ] || [ ${#FEATURE_NAME} -lt 3 ]; then
-            echo "OpenCode generation failed or produced invalid name, using fallback..."
+            echo "Copilot generation failed or produced invalid name, using fallback..."
             FEATURE_NAME="${{ steps.issue.outputs.clean_title }}"
             FEATURE_NAME=$(echo "$FEATURE_NAME" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9 ]//g' | tr ' ' '-' | cut -c1-40)
           fi
@@ -159,19 +159,19 @@ jobs:
         run: |
           mkdir -p "docs/features/${{ steps.final_feature_name.outputs.feature_name }}"
 
-      - name: Create OpenCode prompt file for feature summary
+      - name: Create Copilot prompt file for feature summary
         env:
           ISSUE_TITLE: ${{ steps.issue.outputs.issue_title }}
           ISSUE_BODY: ${{ steps.issue.outputs.issue_body }}
           ISSUE_NUMBER: ${{ steps.issue.outputs.issue_number }}
           FEATURE_NAME: ${{ steps.final_feature_name.outputs.feature_name }}
         run: |
-          cat > /tmp/opencode_prompt.txt << 'PROMPT_EOF'
+          cat > /tmp/copilot_prompt.txt << 'PROMPT_EOF'
           You are an expert software architect tasked with creating a comprehensive feature summary.
           
           CRITICAL INSTRUCTIONS:
-          1. Load the feature-summary skill from .agents/skills/feature-summary
-          2. Use the skill to create a detailed feature summary document
+          1. Read and follow the feature-summary skill guidelines provided in the context
+          2. Create a detailed feature summary document based on those guidelines
           3. The output MUST be saved to: docs/features/${FEATURE_NAME}/summary.md
           
           FEATURE INFORMATION:
@@ -187,24 +187,23 @@ jobs:
           PROMPT_EOF
           
           # Substitute environment variables into the file
-          envsubst < /tmp/opencode_prompt.txt > /tmp/opencode_prompt_final.txt
-          mv /tmp/opencode_prompt_final.txt /tmp/opencode_prompt.txt
+          envsubst < /tmp/copilot_prompt.txt > /tmp/copilot_prompt_final.txt
+          mv /tmp/copilot_prompt_final.txt /tmp/copilot_prompt.txt
           
           # Debug: Verify file was created
           echo "=== Feature summary prompt file created ==="
-          ls -la /tmp/opencode_prompt.txt
+          ls -la /tmp/copilot_prompt.txt
           echo "=== Content preview (first 30 lines) ==="
-          head -n 30 /tmp/opencode_prompt.txt
+          head -n 30 /tmp/copilot_prompt.txt
 
-      - name: Run OpenCode feature-summary skill
+      - name: Run Copilot feature-summary skill
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          # Run OpenCode with the feature-summary skill
-          opencode run \
-            --file "/tmp/opencode_prompt.txt" \
-            --file ".agents/skills/feature-summary/SKILL.md" \
-            "Create a feature summary document for the given feature request. Save the output to docs/features/${{ steps.final_feature_name.outputs.feature_name }}/summary.md"
+          # Run Copilot with the feature-summary skill
+          # We concatenate the skill definition and the prompt to provide full context
+          
+          copilot -p "$(cat .agents/skills/feature-summary/SKILL.md) $(cat /tmp/copilot_prompt.txt)" --silent --allow-all-tools
         continue-on-error: true
 
       - name: Alternative - Create feature summary manually
@@ -357,10 +356,9 @@ jobs:
             You can manually create the feature summary by:
             
             1. Clone the repository
-            2. Run OpenCode with the feature-summary skill:
+            2. Run Copilot with the feature-summary skill:
                \`\`\`bash
-               opencode
-               # Then use: "Load the feature-summary skill and create a summary for issue #${{ steps.issue.outputs.issue_number }}"
+               copilot -p "Read .agents/skills/feature-summary/SKILL.md and create a feature summary for issue #${{ steps.issue.outputs.issue_number }}"
                \`\`\`
             
             3. Or manually create the document at:
