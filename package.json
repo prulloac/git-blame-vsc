@@ -7,7 +7,7 @@
     "url": "https://github.com/prulloac/git-blame-vsc.git"
   },
   "publisher": "prulloac",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "icon": "media/icon.png",
   "license": "MIT",
   "keywords": [
@@ -32,17 +32,17 @@
     "commands": [
       {
         "command": "git-blame-vsc.helloWorld",
-        "title": "Hello World",
+        "title": "Git Blame: Hello World",
         "category": "Git Blame"
       },
       {
         "command": "git-blame-vsc.clearOverlay",
-        "title": "Clear Line Overlay",
+        "title": "Git Blame: Clear Line Overlay",
         "category": "Git Blame"
       },
       {
         "command": "git-blame-vsc.copyCommitHash",
-        "title": "Copy Commit Hash (Git Blame)",
+        "title": "Git Blame: Copy Commit Hash",
         "category": "Git Blame"
       }
     ],

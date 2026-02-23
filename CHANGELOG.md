@@ -4,6 +4,14 @@ All notable changes to the "git-blame-vsc" extension will be documented in this 
 
 Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how to structure this file.
 
+## [0.2.1] - 2026-02-23
+
+### Fixed
+- Command naming consistency - All commands now properly include "Git Blame: " prefix for better discoverability in Command Palette
+  - `Hello World` → `Git Blame: Hello World`
+  - `Clear Line Overlay` → `Git Blame: Clear Line Overlay`
+  - `Copy Commit Hash (Git Blame)` → `Git Blame: Copy Commit Hash`
+
 ## [0.2.0] - 2026-02-23
 
 ### Added

@@ -39,6 +39,25 @@ When choosing between tools, follow these rules to avoid common mistakes:
 - **Test Alignment**: New code should be accompanied by relevant unit or integration tests, following the repository's test framework.
 - **Error Handling**: Every major operation (API calls, file I/O) must have robust error handling and user-facing reporting.
 
+### VS Code Extension Command Naming
+
+**CRITICAL**: All VS Code commands for this extension MUST include the "Git Blame: " prefix.
+
+- **Command Title Format**: `Git Blame: <Command Description>`
+- **Examples**:
+  - ✅ `Git Blame: Show Blame Information`
+  - ✅ `Git Blame: Toggle Inline Blame`
+  - ✅ `Git Blame: Clear Cache`
+  - ❌ `Show Blame Information` (missing prefix)
+  - ❌ `Toggle Inline Blame` (missing prefix)
+
+This prefix ensures:
+1. Users can easily identify commands belonging to this extension
+2. Commands are grouped together in the Command Palette
+3. Consistent branding across all extension functionality
+
+When registering commands in `package.json` or TypeScript code, always use the full "Git Blame: " prefix in the command title/label.
+
 ---
 
 ## 🔴 MANDATORY: File Organization Requirement
