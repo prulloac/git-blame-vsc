@@ -6,7 +6,6 @@ out/
 *.js.map
 *.d.ts
 .tsbuildinfo
-package-lock.json
 yarn.lock
 
 # Python
