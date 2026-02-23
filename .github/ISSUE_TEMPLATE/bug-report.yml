@@ -1,0 +1,115 @@
+name: 🐞 Bug Report
+description: Report a bug or issue with the Git Blame extension
+title: "[Bug]: "
+labels: ["bug", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to report this bug! Please provide as much detail as possible to help us fix it.
+  
+  - type: checkboxes
+    id: prior-search
+    attributes:
+      label: Have you searched for existing issues?
+      description: Please check if this issue has already been reported
+      options:
+        - label: I have searched existing issues
+          required: true
+  
+  - type: input
+    id: bug-summary
+    attributes:
+      label: Bug Summary
+      description: A clear, concise description of the bug
+      placeholder: "e.g., Git blame overlay not appearing on TypeScript files"
+    validations:
+      required: true
+  
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What Happened?
+      description: A clear description of what you were doing and what went wrong
+      placeholder: |
+        I was trying to view git blame for a line in my file...
+        I expected to see the commit information overlay...
+        Instead, I saw...
+    validations:
+      required: true
+  
+  - type: textarea
+    id: steps-to-reproduce
+    attributes:
+      label: Steps to Reproduce
+      description: Clear steps we can follow to reproduce the bug
+      placeholder: |
+        1. Open a file in VS Code
+        2. Navigate to line...
+        3. Click/hover on...
+        4. Observe...
+    validations:
+      required: true
+  
+  - type: input
+    id: extension-version
+    attributes:
+      label: Extension Version
+      description: What version of the Git Blame extension are you using?
+      placeholder: "0.0.2"
+    validations:
+      required: true
+  
+  - type: input
+    id: vscode-version
+    attributes:
+      label: VS Code Version
+      description: What version of VS Code are you using? (Help > About)
+      placeholder: "1.95.0"
+    validations:
+      required: true
+  
+  - type: dropdown
+    id: operating-system
+    attributes:
+      label: Operating System
+      description: What OS are you using?
+      options:
+        - Windows
+        - macOS
+        - Linux
+        - Other
+    validations:
+      required: true
+  
+  - type: textarea
+    id: error-logs
+    attributes:
+      label: Error Logs or Output
+      description: Any relevant error messages from the Output panel (View > Output > Git Blame) or Developer Tools (Help > Toggle Developer Tools)
+      placeholder: "Paste error output here"
+      render: shell
+    validations:
+      required: false
+  
+  - type: dropdown
+    id: severity
+    attributes:
+      label: Severity
+      description: How critical is this bug?
+      options:
+        - "Critical - Extension is completely unusable"
+        - "High - Major feature is broken"
+        - "Medium - Some features affected"
+        - "Low - Minor cosmetic or convenience issue"
+    validations:
+      required: true
+  
+  - type: textarea
+    id: additional-context
+    attributes:
+      label: Additional Context
+      description: Any other information that might be helpful (screenshots, configuration settings, etc.)
+      placeholder: "Include screenshots, workspace settings, or other details..."
+    validations:
+      required: false

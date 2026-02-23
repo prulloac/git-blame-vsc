@@ -1,0 +1,112 @@
+name: 🔧 Feature Enhancement
+description: Suggest an improvement to an existing feature
+title: "[Enhancement]: "
+labels: ["enhancement", "improvement", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for suggesting an enhancement! Help us improve existing features of the Git Blame extension.
+  
+  - type: checkboxes
+    id: prior-search
+    attributes:
+      label: Have you searched for existing enhancement requests?
+      options:
+        - label: I have searched existing issues
+          required: true
+  
+  - type: input
+    id: enhancement-summary
+    attributes:
+      label: Enhancement Summary
+      description: Brief description of the enhancement
+      placeholder: "e.g., Improve performance of git blame on large files"
+    validations:
+      required: true
+  
+  - type: dropdown
+    id: feature-area
+    attributes:
+      label: Which Feature Area?
+      description: What existing feature would this enhance?
+      options:
+        - Git blame overlay display
+        - Hover tooltip functionality
+        - Status bar integration
+        - Copy commit hash command
+        - Configuration/settings
+        - Performance
+        - Other
+    validations:
+      required: true
+  
+  - type: textarea
+    id: current-behavior
+    attributes:
+      label: Current Behavior
+      description: How does the feature currently work?
+      placeholder: |
+        Currently, when I use [feature], it...
+        The behavior is...
+    validations:
+      required: true
+  
+  - type: textarea
+    id: desired-behavior
+    attributes:
+      label: Desired Behavior
+      description: How would you like the feature to work instead?
+      placeholder: |
+        I would like the feature to...
+        This would allow me to...
+        The improvement would be...
+    validations:
+      required: true
+  
+  - type: textarea
+    id: benefits
+    attributes:
+      label: Benefits
+      description: What benefits would this enhancement provide?
+      placeholder: |
+        - Faster performance when...
+        - Better UX because...
+        - More consistent with...
+      render: markdown
+    validations:
+      required: true
+  
+  - type: dropdown
+    id: impact
+    attributes:
+      label: Impact
+      description: How much would this enhancement improve your workflow?
+      options:
+        - Low - Minor improvement
+        - Medium - Noticeable improvement
+        - High - Significant improvement
+    validations:
+      required: true
+  
+  - type: textarea
+    id: examples
+    attributes:
+      label: Examples or References
+      description: Examples from other tools, extensions, or specific scenarios where this enhancement would help
+      placeholder: |
+        - GitLens does this by...
+        - In this scenario: ...
+        - Similar to how...
+      render: markdown
+    validations:
+      required: false
+  
+  - type: textarea
+    id: additional-context
+    attributes:
+      label: Additional Context
+      description: Screenshots, performance metrics, or other relevant information
+      placeholder: "Include any additional details, comparisons, or data..."
+    validations:
+      required: false
