@@ -30,7 +30,20 @@ jobs:
         env:
           # The CLI looks for this token to authenticate headlessly
           COPILOT_GITHUB_TOKEN: ${{ secrets.COPILOT_GITHUB_TOKEN }}
+          ISSUE_TITLE: ${{ github.event.issue.title }}
+          ISSUE_BODY: ${{ github.event.issue.body }}
         run: |
+          # Construct the prompt with issue details
+          # Use a file to avoid command line length limits or escaping issues
+          cat <<EOF > prompt.txt
+          Please summarize the intentions of the following issue:
+          
+          Title: $ISSUE_TITLE
+          
+          Body:
+          $ISSUE_BODY
+          EOF
+          
           # Use -p for prompt, -s for silent (output only the answer)
-          # Use --allow-all-tools if the prompt requires executing shell commands
-          copilot -sp "Summarize the changes in the current directory" --allow-all-tools
+          # Read prompt from file to ensure safe handling
+          copilot -s -p "$(cat prompt.txt)"
