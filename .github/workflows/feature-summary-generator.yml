@@ -63,7 +63,7 @@ jobs:
 
       - name: Create OpenCode prompt for feature name
         run: |
-          cat > /tmp/feature_name_prompt.txt << 'PROMPT_EOF'
+          cat > /tmp/feature_name_prompt.txt << PROMPT_EOF
           Generate a concise, kebab-case feature name (2-4 words max, lowercase, hyphen-separated) for the following feature:
 
           Title: ${{ steps.issue.outputs.clean_title }}
@@ -87,16 +87,34 @@ jobs:
           
           Respond with ONLY the feature name, nothing else. No quotes, no explanation.
           PROMPT_EOF
+          
+          # Debug: Verify file was created
+          echo "=== Feature name prompt file created ==="
+          ls -la /tmp/feature_name_prompt.txt
+          echo "=== Content preview ==="
+          head -n 10 /tmp/feature_name_prompt.txt
 
       - name: Generate concise feature name with OpenCode
         id: feature_name_generation
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          # Check if OpenCode is available
+          if ! command -v opencode &> /dev/null; then
+            echo "OpenCode CLI not found, skipping AI generation"
+            exit 1
+          fi
+          
+          # Verify prompt file exists
+          if [ ! -f /tmp/feature_name_prompt.txt ]; then
+            echo "Prompt file not found at /tmp/feature_name_prompt.txt"
+            exit 1
+          fi
+          
           # Try to generate feature name with OpenCode
           echo "Attempting to generate feature name with OpenCode..."
           
-          FEATURE_NAME=$(opencode run --file /tmp/feature_name_prompt.txt "execute" 2>&1 | tail -1 | tr -d '"' | tr -d "'" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9-]//g' | cut -c1-40)
+          FEATURE_NAME=$(opencode run --file /tmp/feature_name_prompt.txt 2>&1 | tail -1 | tr -d '"' | tr -d "'" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9-]//g' | cut -c1-40)
           
           # Validate the generated name
           if [ -z "$FEATURE_NAME" ] || [ ${#FEATURE_NAME} -lt 3 ]; then
@@ -136,7 +154,7 @@ jobs:
 
       - name: Create OpenCode prompt file for feature summary
         run: |
-          cat > /tmp/opencode_prompt.txt << 'PROMPT_EOF'
+          cat > /tmp/opencode_prompt.txt << PROMPT_EOF
           You are an expert software architect tasked with creating a comprehensive feature summary.
           
           CRITICAL INSTRUCTIONS:
@@ -155,6 +173,10 @@ jobs:
           
           Please create a comprehensive feature summary following the feature-summary skill guidelines.
           PROMPT_EOF
+          
+          # Debug: Verify file was created
+          echo "=== Feature summary prompt file created ==="
+          ls -la /tmp/opencode_prompt.txt
 
       - name: Run OpenCode feature-summary skill
         env:
