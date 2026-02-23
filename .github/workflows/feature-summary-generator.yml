@@ -26,24 +26,83 @@ jobs:
       - name: Install Copilot CLI
         run: npm install -g @github/copilot
 
-      - name: Execute Prompt
+      - name: Generate Feature Name
+        id: feature_name
         env:
-          # The CLI looks for this token to authenticate headlessly
+          COPILOT_GITHUB_TOKEN: ${{ secrets.COPILOT_GITHUB_TOKEN }}
+          ISSUE_TITLE: ${{ github.event.issue.title }}
+        run: |
+          # Create prompt for feature name
+          cat <<EOF > name_prompt.txt
+          Convert the following issue title into a short, hyphenated feature name (kebab-case), max 50 characters. 
+          Output ONLY the name, no other text or explanation.
+          
+          Title: $ISSUE_TITLE
+          EOF
+          
+          # Generate name
+          FEATURE_NAME=$(copilot -s -p "$(cat name_prompt.txt)")
+          echo "Generated feature name: $FEATURE_NAME"
+          echo "FEATURE_NAME=$FEATURE_NAME" >> $GITHUB_ENV
+
+      - name: Generate Summary Content
+        id: summary_content
+        env:
           COPILOT_GITHUB_TOKEN: ${{ secrets.COPILOT_GITHUB_TOKEN }}
           ISSUE_TITLE: ${{ github.event.issue.title }}
           ISSUE_BODY: ${{ github.event.issue.body }}
         run: |
-          # Construct the prompt with issue details
-          # Use a file to avoid command line length limits or escaping issues
-          cat <<EOF > prompt.txt
-          Please summarize the intentions of the following issue:
+          # Create prompt file
+          cat <<EOF > summary_prompt.txt
+          You are an expert technical writer. 
+          Read the following Skill documentation and the Issue description. 
+          Then, generate a 'summary.md' file content for the feature described in the issue, strictly following the 'feature-summary' skill guidelines. 
+          Output ONLY the markdown content for the file. Do not include markdown code block fences (like \`\`\`markdown) around the output.
           
-          Title: $ISSUE_TITLE
+          Skill Documentation:
+          EOF
           
-          Body:
+          # Append skill content safely
+          cat .agents/skills/feature-summary/SKILL.md >> summary_prompt.txt
+          
+          # Append issue details
+          cat <<EOF >> summary_prompt.txt
+          
+          Issue Title: $ISSUE_TITLE
+          
+          Issue Body:
           $ISSUE_BODY
           EOF
           
-          # Use -p for prompt, -s for silent (output only the answer)
-          # Read prompt from file to ensure safe handling
-          copilot -s -p "$(cat prompt.txt)"
+          # Generate summary
+          # We redirect output to a file to handle multi-line content correctly
+          copilot -s -p "$(cat summary_prompt.txt)" > generated_summary.md
+
+      - name: Create Pull Request
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # Configure git
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          
+          # Create branch
+          BRANCH_NAME="feature-summary/$FEATURE_NAME"
+          git checkout -b "$BRANCH_NAME"
+          
+          # Create directory and move file
+          mkdir -p "docs/features/$FEATURE_NAME"
+          mv generated_summary.md "docs/features/$FEATURE_NAME/summary.md"
+          
+          # Commit
+          git add "docs/features/$FEATURE_NAME/summary.md"
+          git commit -m "docs: generate feature summary for $FEATURE_NAME"
+          
+          # Push and Create PR
+          git push origin "$BRANCH_NAME"
+          
+          gh pr create \
+            --title "docs: Feature Summary for $FEATURE_NAME" \
+            --body "Auto-generated feature summary based on issue #${{ github.event.issue.number }} using the feature-summary skill." \
+            --base main \
+            --head "$BRANCH_NAME"
