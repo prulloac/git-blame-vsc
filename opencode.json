@@ -1,5 +1,15 @@
 {
   "$schema": "https://opencode.ai/config.json",
-  "enabled_providers": ["github-copilot"],
+  "enabled_providers": ["github-copilot", "opencode"],
+  "mcp": {
+    "github-mcp-server": {
+			"type": "remote",
+			"url": "https://api.githubcopilot.com/mcp/",
+      "oauth": false,
+      "headers": {
+        "Authorization": "Bearer {env:GITHUB_TOKEN}"
+      }
+		}
+  },
   "autoupdate": true
 }
