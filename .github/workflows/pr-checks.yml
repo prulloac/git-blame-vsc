@@ -1,0 +1,211 @@
+name: PR Checks
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, labeled, unlabeled]
+
+permissions:
+  contents: read
+  pull-requests: write
+  issues: write
+
+jobs:
+  label-size:
+    name: Label PR Size
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Calculate PR size
+        id: size
+        run: |
+          # Get the list of changed files
+          git fetch origin ${{ github.base_ref }}
+          FILES_CHANGED=$(git diff --name-only origin/${{ github.base_ref }}...HEAD | wc -l)
+          LINES_CHANGED=$(git diff --shortstat origin/${{ github.base_ref }}...HEAD | grep -oE '[0-9]+ insertion|[0-9]+ deletion' | grep -oE '[0-9]+' | awk '{sum+=$1} END {print sum}')
+          
+          echo "files_changed=$FILES_CHANGED" >> $GITHUB_OUTPUT
+          echo "lines_changed=$LINES_CHANGED" >> $GITHUB_OUTPUT
+          
+          # Determine size label
+          if [ "$LINES_CHANGED" -lt 10 ]; then
+            echo "size=XS" >> $GITHUB_OUTPUT
+          elif [ "$LINES_CHANGED" -lt 100 ]; then
+            echo "size=S" >> $GITHUB_OUTPUT
+          elif [ "$LINES_CHANGED" -lt 500 ]; then
+            echo "size=M" >> $GITHUB_OUTPUT
+          elif [ "$LINES_CHANGED" -lt 1000 ]; then
+            echo "size=L" >> $GITHUB_OUTPUT
+          else
+            echo "size=XL" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Remove old size labels
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const labels = ['size/XS', 'size/S', 'size/M', 'size/L', 'size/XL'];
+            const currentLabels = await github.rest.issues.listLabelsOnIssue({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number
+            });
+            
+            for (const label of currentLabels.data) {
+              if (labels.includes(label.name)) {
+                await github.rest.issues.removeLabel({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: context.issue.number,
+                  name: label.name
+                }).catch(() => {});
+              }
+            }
+
+      - name: Add size label
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const size = '${{ steps.size.outputs.size }}';
+            const label = `size/${size}`;
+            
+            // Create label if it doesn't exist
+            const colors = {
+              'XS': '00ff00',
+              'S': '7fff00',
+              'M': 'ffd700',
+              'L': 'ff8c00',
+              'XL': 'ff0000'
+            };
+            
+            try {
+              await github.rest.issues.getLabel({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                name: label
+              });
+            } catch (error) {
+              if (error.status === 404) {
+                await github.rest.issues.createLabel({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  name: label,
+                  color: colors[size],
+                  description: `PR size: ${size}`
+                });
+              }
+            }
+            
+            // Add label to PR
+            await github.rest.issues.addLabels({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              labels: [label]
+            });
+
+      - name: Comment PR size
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const size = '${{ steps.size.outputs.size }}';
+            const files = '${{ steps.size.outputs.files_changed }}';
+            const lines = '${{ steps.size.outputs.lines_changed }}';
+            
+            const sizeEmojis = {
+              'XS': '🟢',
+              'S': '🟡',
+              'M': '🟠',
+              'L': '🔴',
+              'XL': '⚫'
+            };
+            
+            const body = `${sizeEmojis[size]} **PR Size: ${size}**\n\n` +
+                         `- Files changed: ${files}\n` +
+                         `- Lines changed: ${lines}\n\n` +
+                         `<sub>Smaller PRs are easier to review and merge! Consider breaking down large PRs when possible.</sub>`;
+            
+            // Check if we already commented
+            const comments = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number
+            });
+            
+            const botComment = comments.data.find(comment => 
+              comment.user.type === 'Bot' && 
+              comment.body.includes('**PR Size:')
+            );
+            
+            if (botComment) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: botComment.id,
+                body: body
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body: body
+              });
+            }
+
+  auto-label:
+    name: Auto-label PR
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Label based on changed files
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { data: files } = await github.rest.pulls.listFiles({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: context.issue.number
+            });
+            
+            const labels = new Set();
+            
+            for (const file of files) {
+              const path = file.filename;
+              
+              // Documentation changes
+              if (path.match(/\.(md|txt)$/i) || path.includes('docs/')) {
+                labels.add('documentation');
+              }
+              
+              // Configuration changes
+              if (path.match(/\.(json|yml|yaml)$/i) || path.includes('.github/') || path.includes('.vscode/')) {
+                labels.add('config');
+              }
+              
+              // Test changes
+              if (path.includes('test/') || path.match(/\.test\.(ts|js)$/)) {
+                labels.add('tests');
+              }
+              
+              // UI/UX changes (extension configuration, commands)
+              if (path.includes('package.json')) {
+                labels.add('ui/ux');
+              }
+            }
+            
+            if (labels.size > 0) {
+              await github.rest.issues.addLabels({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                labels: Array.from(labels)
+              });
+            }
