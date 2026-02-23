@@ -5,6 +5,9 @@ A lightweight VS Code extension that displays git blame information as an inline
 ## Features
 
 - **Git Blame Overlay**: Click any line to see git blame info with customizable formatting
+- **Rich Blame Hovers**: Hover over any line to see detailed commit information in a tooltip
+- **Status Bar Blame**: Optional always-visible blame info in the status bar (disabled by default)
+- **Copy Commit Hash**: Quickly copy the commit hash for the current line to clipboard
 - **Configurable Output Pattern**: Design your own blame display format (e.g., `<hash> <author>(<date>): <message>`)
 - **Automatic Git Integration**: Uses direct git commands to fetch real blame data
 - **Theme-aware styling**: Colors automatically adapt to your VS Code theme (light or dark)
@@ -44,7 +47,36 @@ The extension is highly customizable. You can control:
 
 ### Settings
 
-#### Output Pattern & Message Length
+#### Rich Blame Hovers
+
+* `gitBlameOverlay.hoverEnabled`: Enable/disable hover tooltips with git blame information.
+  - Type: `boolean`
+  - Default: `true` (enabled)
+  - When enabled, hovering over any line shows a rich tooltip with:
+    - Commit hash (short 7-character version)
+    - Full author name and email address
+    - Commit date
+    - Complete commit message (no truncation)
+  - Hovers use markdown formatting for better readability
+  - Automatically dismissed when you move your cursor away
+
+* `gitBlameOverlay.hoverDelay`: Delay before showing hover tooltip.
+  - Type: `number` (milliseconds)
+  - Default: `2000` (2 seconds)
+  - Range: `0` to `5000` (0 to 5 seconds)
+  - Controls how long you need to hover before the tooltip appears
+  - Set to `0` for instant display
+  - Decrease for faster response (e.g., `500` = 0.5 seconds)
+  - Default of 2 seconds ensures hovers only appear when intentionally pausing on a line
+
+#### Status Bar Blame
+
+* `gitBlameOverlay.statusBarEnabled`: Enable/disable status bar blame display.
+  - Type: `boolean`
+  - Default: `false` (disabled)
+  - When enabled, shows git blame information in the VS Code status bar for the currently selected line
+  - Updates automatically as you navigate through code
+  - Uses the same `outputPattern` and `maxMessageLength` settings as the overlay
 
 #### Output Pattern & Message Length
 
@@ -136,6 +168,51 @@ Result: `Add feature support (John, 2024-02-20)`
 
 Result: `[25418bf] John Doe | 2024-02-20 | Add feature support`
 
+#### Configuration 5: Enable Status Bar Blame
+
+```json
+{
+  "gitBlameOverlay.statusBarEnabled": true,
+  "gitBlameOverlay.outputPattern": "<authorShort> | <message>",
+  "gitBlameOverlay.maxMessageLength": 30
+}
+```
+
+Result: Status bar shows `$(git-commit) John | Add feature support` and updates automatically as you navigate
+
+#### Configuration 6: Faster Hover Delay
+
+```json
+{
+  "gitBlameOverlay.hoverEnabled": true,
+  "gitBlameOverlay.hoverDelay": 500
+}
+```
+
+Result: Hover tooltip appears after 0.5 seconds instead of the default 2 seconds. Useful if you want faster access to blame information on hover.
+
+## Commands
+
+The extension provides the following commands (accessible via Command Palette: Cmd+Shift+P or Ctrl+Shift+P):
+
+### Clear Line Overlay
+- **Command**: `Clear Line Overlay`
+- **What it does**: Removes the git blame overlay from the current line
+- **When to use**: When you want to clear the inline blame decoration without changing lines
+
+### Copy Commit Hash
+- **Command**: `Git Blame: Copy Commit Hash`
+- **Access**: 
+  - Command Palette (Cmd+Shift+P or Ctrl+Shift+P)
+  - Right-click context menu in the editor
+- **What it does**: Copies the full commit hash (40-character SHA-1) for the current line to your clipboard
+- **When to use**: When you need to reference a commit in git commands, GitHub URLs, or commit messages
+- **Behavior**:
+  - Shows a notification with a preview of the copied hash (first 7 characters)
+  - Works with any file in a git repository
+  - Handles edge cases gracefully (uncommitted changes, non-git files, etc.)
+- **No default keybinding**: This command intentionally has no keyboard shortcut to avoid conflicts with other extensions. You can assign your own keybinding in VS Code's Keyboard Shortcuts settings if desired.
+
 ### How to Apply Configuration
 
 #### Via settings.json
@@ -175,12 +252,31 @@ To apply different settings for specific projects, add them to `.vscode/settings
 
 ## How It Works
 
+### Inline Overlay (Click-to-Show)
 1. When you click on a line, the extension checks if the file is in a git repository
 2. If yes, it fetches blame information using the `git blame` command
 3. The blame info is parsed to extract commit hash, author, date, and message
 4. The formatted output is generated using your configured `outputPattern`
 5. A decoration is displayed in the editor (cached for 30 seconds)
-6. If the file is not in git, or blame is unavailable, it shows a sample text instead
+6. If the file is not in git, or blame is unavailable, no overlay is shown
+
+### Status Bar (Optional)
+1. When enabled via `statusBarEnabled: true`, the status bar automatically displays blame info
+2. Updates in real-time as you navigate to different lines
+3. Uses the same formatting and caching as the inline overlay
+4. Disabled by default to keep the UI minimal
+
+### Rich Hover Tooltips (On by Default)
+1. When enabled via `hoverEnabled: true` (default), hovering over any line shows a detailed tooltip
+2. Tooltip appears after a brief delay (default: 2 seconds, configurable via `hoverDelay`)
+3. Displays complete commit information without truncation:
+   - Commit hash (7-character short version)
+   - Author name and email
+   - Commit date
+   - Full commit message
+4. Uses markdown formatting for better readability with bold headers and line breaks
+5. Automatically dismissed when you move your cursor away
+6. Benefits from the same 30-second cache as other features
 
 ## Testing the Extension
 
@@ -210,10 +306,11 @@ npm test
 
 This runs the extension test suite.
 
-### Testing the Overlay Feature
+### Testing the Features
 
 Once the extension is running in a git repository:
 
+#### Inline Overlay Testing
 1. **Test git blame**: Open a file in a git repository and click any line - you should see blame info formatted with your configured pattern
 2. **Test fallback**: Open a non-git file and click a line - no overlay should appear (empty string)
 3. **Test theme adaptation**: The overlay should match your editor's colors automatically
@@ -233,6 +330,37 @@ Once the extension is running in a git repository:
 9. **Test clear command**: 
    - Open Command Palette (Cmd+Shift+P or Ctrl+Shift+P)
    - Run "Clear Line Overlay" - the overlay should disappear
+
+#### Status Bar Testing
+1. **Enable status bar**: Set `gitBlameOverlay.statusBarEnabled` to `true` in settings
+2. **Test automatic updates**: Navigate to different lines with arrow keys or clicks - status bar should update automatically
+3. **Test with custom pattern**: The status bar uses the same `outputPattern` as the overlay
+4. **Disable status bar**: Set `statusBarEnabled` to `false` - status bar should disappear immediately
+
+#### Rich Hover Testing
+1. **Test hover display**: 
+   - Open a file in a git repository
+   - Hover your mouse over any line (or position cursor and wait)
+   - A tooltip should appear after ~300ms with detailed commit information
+   - Verify it shows: commit hash, author name, email, date, and full commit message
+2. **Test markdown formatting**: The hover should have bold headers and proper line breaks
+3. **Test full message**: Unlike the inline overlay, the hover shows the complete commit message without truncation
+4. **Test auto-dismiss**: Move your cursor away - the hover should disappear automatically
+5. **Test with multiple lines**: Hover over different lines in succession - each should show different commit info
+6. **Test disable hover**: Set `gitBlameOverlay.hoverEnabled` to `false` - hovers should stop appearing
+7. **Test non-git files**: Hover over a non-git file - no blame hover should appear
+
+#### Copy Commit Hash Testing
+1. **Test copy command**: 
+   - Open a file in a git repository
+   - Place cursor on any line
+   - Open Command Palette (Cmd+Shift+P or Ctrl+Shift+P)
+   - Run "Copy Commit Hash"
+   - Verify you see a notification showing the hash (e.g., "Copied: 25418bf")
+   - Paste somewhere (Cmd+V or Ctrl+V) to verify the full 40-character hash was copied
+2. **Test with uncommitted changes**: Edit a file and test on an uncommitted line - should show appropriate message
+3. **Test with non-git file**: Open a file outside git repository - should show error message gracefully
+4. **Test no active editor**: Close all editors and run command - should show appropriate error
 
 ## Development
 

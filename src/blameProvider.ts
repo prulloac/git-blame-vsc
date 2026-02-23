@@ -58,19 +58,7 @@ export class BlameProvider {
 			}
 
 			console.debug('Parsed blame:', lineBlame);
-
-			// Try to get the full commit message
-			try {
-				const message = await this.getCommitMessage(workspaceFolder.uri.fsPath, lineBlame.hash);
-				console.debug('Got commit message:', message);
-				return {
-					...lineBlame,
-					message: message,
-				};
-			} catch (error) {
-				console.debug('Error getting commit message:', error);
-				return lineBlame; // Return blame without message
-			}
+			return lineBlame;
 		} catch (error) {
 			console.error('Error getting blame info:', error);
 			return null;
@@ -103,8 +91,8 @@ export class BlameProvider {
 
 			console.debug('Fetching blame output for:', relativePath);
 
-			// Run git blame command directly
-			const command = `cd "${repoRoot}" && git blame "${relativePath}"`;
+			// Run git blame command with --line-porcelain for structured output
+			const command = `cd "${repoRoot}" && git blame --line-porcelain "${relativePath}"`;
 			console.debug('Running command:', command);
 
 			let output: string;
@@ -143,82 +131,101 @@ export class BlameProvider {
 	}
 
 	/**
-	 * Parse a single line from git blame output
-	 * Format: <hash> (<author> <date> <time> <timezone> <line-number>) <content>
+	 * Parse a single line from git blame --line-porcelain output
+	 * Porcelain format provides structured data with each commit's info on separate lines
 	 */
 	private parseBlameLineFromOutput(output: string, lineNumber: number): BlameInfo | null {
 		const lines = output.split('\n');
-
-		console.debug('Total lines in blame output:', lines.length);
-		console.debug('Looking for line number:', lineNumber);
-
-		if (lineNumber < 0 || lineNumber >= lines.length) {
-			console.debug('Line number out of bounds');
-			return null;
-		}
-
-		const line = lines[lineNumber];
-		if (!line) {
-			console.debug('Line is empty or null');
-			return null;
-		}
-
-		console.debug('Parsing blame line:', line.substring(0, 100));
-
-		// Regex to parse git blame format
-		// Example: ^8e42b0a (Pablo Ulloa 2026-02-20 22:59:24 +0000 1) dsfas
-		// Format: <hash> (<author-and-date> <timezone> <line-number>) <content>
-		const match = line.match(/^([a-f0-9^]+)\s+\((.+?)\s+(\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2})\s+([+-]\d{4})\s+(\d+)\)/);
-
-		if (!match) {
-			console.debug('Regex did not match. Line content:', line);
-			return null;
-		}
-
-		console.debug('Regex matched!');
-
-		const [, hash, authorInfo, date, timezone] = match;
 		
-		// Author info contains: "Name email" at the beginning
-		// Format: "Pablo Ulloa pablo@example.com"
-		const authorMatch = authorInfo.trim().match(/^(.+?)\s+(<.+>|\S+@\S+|\S+)$/);
+		console.debug('Total lines in porcelain output:', lines.length);
+		console.debug('Looking for line number:', lineNumber + 1); // Git uses 1-indexed line numbers
+
+		// Parse porcelain format - each blame entry starts with hash and line numbers
+		// Format:
+		// <hash> <original-line> <final-line> <num-lines>
+		// author <name>
+		// author-mail <email>
+		// author-time <timestamp>
+		// author-tz <timezone>
+		// committer <name>
+		// committer-mail <email>
+		// committer-time <timestamp>
+		// committer-tz <timezone>
+		// summary <message>
+		// ... other fields ...
+		// \t<actual line content>
 		
-		let authorName = 'Unknown';
+		let currentLineNum = 0;
+		let hash = '';
+		let author = '';
 		let authorEmail = '';
-		let authorShort = 'Unknown';
+		let authorTime = '';
+		let summary = '';
 		
-		if (authorMatch) {
-			authorName = authorMatch[1].trim();
-			authorEmail = authorMatch[2].trim().replace(/^<|>$/g, ''); // Remove angle brackets if present
-			// Get first word of name as short name
-			authorShort = authorName.split(/\s+/)[0];
-		} else {
-			// Fallback: split by whitespace
-			const authorParts = authorInfo.trim().split(/\s+/);
-			if (authorParts.length >= 2) {
-				authorEmail = authorParts[authorParts.length - 1];
-				authorName = authorParts.slice(0, -1).join(' ');
-				authorShort = authorParts[0];
-			} else {
-				authorName = authorInfo.trim();
-				authorShort = authorName.split(/\s+/)[0];
+		for (let i = 0; i < lines.length; i++) {
+			const line = lines[i];
+			
+			// Check if this is the start of a new blame block
+			if (line.match(/^[a-f0-9]{40}\s+\d+\s+\d+/)) {
+				const parts = line.split(/\s+/);
+				hash = parts[0];
+				currentLineNum = parseInt(parts[2], 10) - 1; // Convert to 0-indexed
+				
+				// Reset fields for this block
+				author = '';
+				authorEmail = '';
+				authorTime = '';
+				summary = '';
+				
+				console.debug('Found blame block - hash:', hash, 'line:', currentLineNum);
+				
+				// Parse the metadata lines that follow
+				for (let j = i + 1; j < lines.length; j++) {
+					const metaLine = lines[j];
+					
+					// Stop when we hit the actual content line (starts with tab)
+					if (metaLine.startsWith('\t')) {
+						i = j; // Update outer loop position
+						break;
+					}
+					
+					if (metaLine.startsWith('author ')) {
+						author = metaLine.substring(7);
+					} else if (metaLine.startsWith('author-mail ')) {
+						// Remove angle brackets from email
+						authorEmail = metaLine.substring(12).replace(/^<|>$/g, '');
+					} else if (metaLine.startsWith('author-time ')) {
+						const timestamp = parseInt(metaLine.substring(12), 10);
+						// Convert Unix timestamp to YYYY-MM-DD format
+						const date = new Date(timestamp * 1000);
+						authorTime = date.toISOString().substring(0, 10); // Get YYYY-MM-DD
+					} else if (metaLine.startsWith('summary ')) {
+						summary = metaLine.substring(8);
+					}
+				}
+				
+				// Check if this is the line we're looking for
+				if (currentLineNum === lineNumber) {
+					const authorShort = author.split(/\s+/)[0];
+					
+					console.debug('Found target line!');
+					console.debug('Parsed - hash:', hash, 'author:', author, 'email:', authorEmail, 'short:', authorShort, 'date:', authorTime);
+					
+					return {
+						hash: hash, // Keep full hash for now, we'll handle short hash in the formatter
+						author: author,
+						authorEmail: authorEmail,
+						authorShort: authorShort,
+						date: authorTime,
+						message: summary,
+						lineNumber: lineNumber,
+					};
+				}
 			}
 		}
 		
-		// Combine date and timezone for full datetime
-		const fullDate = `${date} ${timezone}`;
-
-		console.debug('Parsed - hash:', hash, 'author:', authorName, 'email:', authorEmail, 'short:', authorShort, 'date:', fullDate);
-
-		return {
-			hash: hash.replace(/^\^/, '').substring(0, 7), // Remove ^ prefix if present and use short hash
-			author: authorName,
-			authorEmail,
-			authorShort,
-			date: fullDate,
-			message: '', // Will be fetched from commit
-			lineNumber,
-		};
+		console.debug('Line not found in blame output');
+		return null;
 	}
 
 	/**

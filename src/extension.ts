@@ -3,9 +3,12 @@
 import * as vscode from 'vscode';
 import { OverlayManager, OverlayConfig } from './overlayManager';
 import { BlameProvider } from './blameProvider';
+import { StatusBarManager } from './statusBarManager';
+import { BlameHoverProvider } from './blameHoverProvider';
 
 let overlayManager: OverlayManager | null = null;
 let blameProvider: BlameProvider | null = null;
+let statusBarManager: StatusBarManager | null = null;
 
 /**
  * Get current configuration from VS Code settings
@@ -62,9 +65,12 @@ function formatBlameText(blameInfo: { author: string; authorEmail: string; autho
 		? blameInfo.message.substring(0, maxMessageLength) + '...' 
 		: blameInfo.message;
 	
+	// Use short hash (7 chars) for display
+	const shortHash = blameInfo.hash.substring(0, 7);
+	
 	// Replace pattern variables with actual values
 	let output = pattern
-		.replace(/<hash>/g, blameInfo.hash)
+		.replace(/<hash>/g, shortHash)
 		.replace(/<author>/g, blameInfo.author)
 		.replace(/<authorShort>/g, blameInfo.authorShort)
 		.replace(/<authorEmail>/g, blameInfo.authorEmail)
@@ -85,10 +91,28 @@ export async function activate(context: vscode.ExtensionContext) {
 	// Initialize OverlayManager with current configuration
 	overlayManager = new OverlayManager(getOverlayConfig());
 
+	// Initialize StatusBarManager with current configuration
+	const config = vscode.workspace.getConfiguration('gitBlameOverlay');
+	statusBarManager = new StatusBarManager(config.get('statusBarEnabled', false));
+
 	// Initialize BlameProvider
 	blameProvider = await initializeBlameProvider();
 	if (!blameProvider) {
 		console.log('Git blame feature unavailable');
+	}
+
+	// Register hover provider for rich blame tooltips (if enabled)
+	let hoverDisposable: vscode.Disposable | null = null;
+	if (blameProvider) {
+		const hoverEnabled = config.get('hoverEnabled', true);
+		if (hoverEnabled) {
+			const hoverProvider = new BlameHoverProvider(blameProvider);
+			hoverDisposable = vscode.languages.registerHoverProvider(
+				{ scheme: 'file' },  // Only for file:// URIs (git-tracked files)
+				hoverProvider
+			);
+			context.subscriptions.push(hoverDisposable);
+		}
 	}
 
 	// Register the helloWorld command
@@ -100,6 +124,50 @@ export async function activate(context: vscode.ExtensionContext) {
 	const clearOverlayDisposable = vscode.commands.registerCommand('git-blame-vsc.clearOverlay', () => {
 		if (overlayManager) {
 			overlayManager.clearOverlay();
+		}
+	});
+
+	// Register the copyCommitHash command
+	const copyCommitHashDisposable = vscode.commands.registerCommand('git-blame-vsc.copyCommitHash', async () => {
+		const editor = vscode.window.activeTextEditor;
+		
+		// Check if there's an active editor
+		if (!editor) {
+			vscode.window.showWarningMessage('No active editor');
+			return;
+		}
+
+		// Check if file is in a git repository (scheme is 'file')
+		if (editor.document.uri.scheme !== 'file') {
+			vscode.window.showWarningMessage('File is not in a git repository');
+			return;
+		}
+
+		// Check if blame provider is available
+		if (!blameProvider) {
+			vscode.window.showWarningMessage('Git blame unavailable');
+			return;
+		}
+
+		const line = editor.selection.active.line;
+		const filePath = editor.document.fileName;
+
+		try {
+			const blameInfo = await blameProvider.getBlameForLine(filePath, line);
+			
+			if (blameInfo && blameInfo.hash) {
+				// Copy full hash to clipboard
+				await vscode.env.clipboard.writeText(blameInfo.hash);
+				
+				// Show success message with short hash preview (7 chars)
+				const shortHash = blameInfo.hash.substring(0, 7);
+				vscode.window.showInformationMessage(`Commit hash copied: ${shortHash}`);
+			} else {
+				vscode.window.showWarningMessage('No git blame information available for this line');
+			}
+		} catch (error) {
+			console.error('Error copying commit hash:', error);
+			vscode.window.showErrorMessage('Failed to copy commit hash');
 		}
 	});
 
@@ -115,7 +183,7 @@ export async function activate(context: vscode.ExtensionContext) {
 		// Try to get git blame information
 		if (blameProvider && editor.document.uri.scheme === 'file') {
 			blameProvider.getBlameForLine(editor.document.fileName, line).then((blameInfo) => {
-				if (blameInfo && overlayManager) {
+				if (blameInfo) {
 					const blameText = formatBlameText({
 						author: blameInfo.author,
 						authorEmail: blameInfo.authorEmail,
@@ -124,10 +192,24 @@ export async function activate(context: vscode.ExtensionContext) {
 						hash: blameInfo.hash,
 						date: blameInfo.date
 					});
-					overlayManager.showOverlay(line, editor, blameText);
-				} else if (overlayManager) {
+					
+					// Update overlay
+					if (overlayManager) {
+						overlayManager.showOverlay(line, editor, blameText);
+					}
+					
+					// Update status bar
+					if (statusBarManager) {
+						statusBarManager.updateBlameInfo(blameText);
+					}
+				} else {
 					// Fallback to sample text if blame info unavailable
-					overlayManager.showOverlay(line, editor);
+					if (overlayManager) {
+						overlayManager.showOverlay(line, editor);
+					}
+					if (statusBarManager) {
+						statusBarManager.clear();
+					}
 				}
 			}).catch((error) => {
 				console.error('Error getting blame info:', error);
@@ -135,23 +217,59 @@ export async function activate(context: vscode.ExtensionContext) {
 				if (overlayManager) {
 					overlayManager.showOverlay(line, editor);
 				}
+				if (statusBarManager) {
+					statusBarManager.clear();
+				}
 			});
 		} else {
 			// Show overlay on the clicked line (without blame info)
 			overlayManager.showOverlay(line, editor);
+			if (statusBarManager) {
+				statusBarManager.clear();
+			}
 		}
 	});
 
 	// Listen for configuration changes and update overlay
 	const configChangeDisposable = vscode.workspace.onDidChangeConfiguration((event) => {
-		if (event.affectsConfiguration('gitBlameOverlay') && overlayManager) {
-			overlayManager.updateConfig(getOverlayConfig());
+		if (event.affectsConfiguration('gitBlameOverlay')) {
+			// Update overlay config
+			if (overlayManager) {
+				overlayManager.updateConfig(getOverlayConfig());
+			}
+			
+			// Update status bar enabled state
+			if (event.affectsConfiguration('gitBlameOverlay.statusBarEnabled') && statusBarManager) {
+				const config = vscode.workspace.getConfiguration('gitBlameOverlay');
+				statusBarManager.setEnabled(config.get('statusBarEnabled', false));
+			}
+			
+			// Update hover provider enabled state
+			if (event.affectsConfiguration('gitBlameOverlay.hoverEnabled') && blameProvider) {
+				const config = vscode.workspace.getConfiguration('gitBlameOverlay');
+				const hoverEnabled = config.get('hoverEnabled', true);
+				
+				if (hoverEnabled && !hoverDisposable) {
+					// Enable hover provider
+					const hoverProvider = new BlameHoverProvider(blameProvider);
+					hoverDisposable = vscode.languages.registerHoverProvider(
+						{ scheme: 'file' },
+						hoverProvider
+					);
+					context.subscriptions.push(hoverDisposable);
+				} else if (!hoverEnabled && hoverDisposable) {
+					// Disable hover provider
+					hoverDisposable.dispose();
+					hoverDisposable = null;
+				}
+			}
 		}
 	});
 
 	context.subscriptions.push(
 		helloWorldDisposable,
 		clearOverlayDisposable,
+		copyCommitHashDisposable,
 		editorClickDisposable,
 		configChangeDisposable
 	);
@@ -162,6 +280,10 @@ export async function activate(context: vscode.ExtensionContext) {
 			if (overlayManager) {
 				overlayManager.dispose();
 				overlayManager = null;
+			}
+			if (statusBarManager) {
+				statusBarManager.dispose();
+				statusBarManager = null;
 			}
 			if (blameProvider) {
 				blameProvider.clearCache();
@@ -176,6 +298,10 @@ export function deactivate() {
 	if (overlayManager) {
 		overlayManager.dispose();
 		overlayManager = null;
+	}
+	if (statusBarManager) {
+		statusBarManager.dispose();
+		statusBarManager = null;
 	}
 	if (blameProvider) {
 		blameProvider.clearCache();

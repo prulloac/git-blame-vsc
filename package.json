@@ -32,13 +32,29 @@
     "commands": [
       {
         "command": "git-blame-vsc.helloWorld",
-        "title": "Hello World"
+        "title": "Hello World",
+        "category": "Git Blame"
       },
       {
         "command": "git-blame-vsc.clearOverlay",
-        "title": "Clear Line Overlay"
+        "title": "Clear Line Overlay",
+        "category": "Git Blame"
+      },
+      {
+        "command": "git-blame-vsc.copyCommitHash",
+        "title": "Copy Commit Hash (Git Blame)",
+        "category": "Git Blame"
       }
     ],
+    "menus": {
+      "editor/context": [
+        {
+          "command": "git-blame-vsc.copyCommitHash",
+          "group": "9_cutcopypaste",
+          "when": "editorTextFocus"
+        }
+      ]
+    },
     "configuration": {
       "title": "Git Blame Overlay",
       "properties": {
@@ -88,6 +104,23 @@
           "minimum": 1,
           "default": 24,
           "description": "Maximum length of the commit message in the output (characters)"
+        },
+        "gitBlameOverlay.statusBarEnabled": {
+          "type": "boolean",
+          "default": false,
+          "description": "Enable/disable status bar blame display. When enabled, shows git blame information in the status bar for the currently selected line."
+        },
+        "gitBlameOverlay.hoverEnabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable/disable hover tooltips with git blame information. When enabled, hovering over a line shows detailed commit information."
+        },
+        "gitBlameOverlay.hoverDelay": {
+          "type": "number",
+          "default": 2000,
+          "minimum": 0,
+          "maximum": 5000,
+          "description": "Delay in milliseconds before showing the hover tooltip. Default is 2000ms (2 seconds). Set to 0 for instant display, or adjust for your preferred delay."
         }
       }
     }
