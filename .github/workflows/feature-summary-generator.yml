@@ -1,0 +1,264 @@
+name: Feature Summary Generator
+
+on:
+  issues:
+    types: [labeled]
+
+permissions:
+  contents: write
+  issues: write
+  pull-requests: write
+
+jobs:
+  generate-feature-summary:
+    name: Generate Feature Summary
+    # Only run if the label "accepted" was just added and it's a feature request or enhancement
+    if: |
+      github.event.label.name == 'accepted' &&
+      (contains(github.event.issue.labels.*.name, 'enhancement') ||
+       contains(github.event.issue.title, '[Feature]') ||
+       contains(github.event.issue.title, '[Enhancement]'))
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Install OpenCode CLI
+        run: |
+          npm install -g @opencode/cli
+          
+      - name: Get issue details
+        id: issue
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const issue = context.payload.issue;
+            
+            // Extract feature name from issue title
+            let featureName = issue.title
+              .replace(/^\[Feature\]:?\s*/i, '')
+              .replace(/^\[Enhancement\]:?\s*/i, '')
+              .toLowerCase()
+              .replace(/[^a-z0-9\s-]/g, '')
+              .replace(/\s+/g, '-')
+              .substring(0, 50);
+            
+            core.setOutput('feature_name', featureName);
+            core.setOutput('issue_number', issue.number);
+            core.setOutput('issue_title', issue.title);
+            core.setOutput('issue_body', issue.body || '');
+            
+            return {
+              featureName,
+              issueNumber: issue.number,
+              issueTitle: issue.title,
+              issueBody: issue.body || ''
+            };
+
+      - name: Create feature directory
+        run: |
+          mkdir -p "docs/features/${{ steps.issue.outputs.feature_name }}"
+
+      - name: Create OpenCode prompt file
+        run: |
+          cat > /tmp/opencode_prompt.txt << 'PROMPT_EOF'
+          You are an expert software architect tasked with creating a comprehensive feature summary.
+          
+          CRITICAL INSTRUCTIONS:
+          1. Load the feature-summary skill from .agents/skills/feature-summary
+          2. Use the skill to create a detailed feature summary document
+          3. The output MUST be saved to: docs/features/${{ steps.issue.outputs.feature_name }}/summary.md
+          
+          FEATURE INFORMATION:
+          
+          Title: ${{ steps.issue.outputs.issue_title }}
+          
+          Description:
+          ${{ steps.issue.outputs.issue_body }}
+          
+          SOURCE: GitHub Issue #${{ steps.issue.outputs.issue_number }}
+          
+          Please create a comprehensive feature summary following the feature-summary skill guidelines.
+          PROMPT_EOF
+
+      - name: Run OpenCode feature-summary skill
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # Run OpenCode with the feature-summary skill
+          opencode run \
+            --prompt "$(cat /tmp/opencode_prompt.txt)" \
+            --skill feature-summary \
+            --output "docs/features/${{ steps.issue.outputs.feature_name }}/summary.md" \
+            --context "issue=#${{ steps.issue.outputs.issue_number }}" \
+            --auto-approve
+        continue-on-error: true
+
+      - name: Alternative - Create feature summary manually
+        if: failure()
+        run: |
+          cat > "docs/features/${{ steps.issue.outputs.feature_name }}/summary.md" << 'EOF'
+          # Feature Summary: ${{ steps.issue.outputs.issue_title }}
+          
+          > **Source:** GitHub Issue [#${{ steps.issue.outputs.issue_number }}](https://github.com/${{ github.repository }}/issues/${{ steps.issue.outputs.issue_number }})
+          > **Status:** Accepted
+          > **Created:** $(date +%Y-%m-%d)
+          
+          ## Overview
+          
+          ${{ steps.issue.outputs.issue_body }}
+          
+          ## Current Status
+          
+          This feature has been accepted and is awaiting detailed planning and implementation.
+          
+          ## Next Steps
+          
+          1. Review and refine requirements
+          2. Create technical design document
+          3. Break down into implementation tasks
+          4. Assign to development sprint
+          
+          ---
+          
+          *This is an initial summary. A detailed feature specification will be created during the planning phase.*
+          EOF
+
+      - name: Check if files were created
+        id: check_files
+        run: |
+          if [ -f "docs/features/${{ steps.issue.outputs.feature_name }}/summary.md" ]; then
+            echo "summary_created=true" >> $GITHUB_OUTPUT
+            echo "✅ Feature summary created"
+          else
+            echo "summary_created=false" >> $GITHUB_OUTPUT
+            echo "❌ Feature summary not created"
+            exit 1
+          fi
+
+      - name: Configure Git
+        if: steps.check_files.outputs.summary_created == 'true'
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Commit and push feature summary
+        if: steps.check_files.outputs.summary_created == 'true'
+        run: |
+          git add "docs/features/${{ steps.issue.outputs.feature_name }}/"
+          git commit -m "feat: add feature summary for issue #${{ steps.issue.outputs.issue_number }}
+
+          Generated feature summary for: ${{ steps.issue.outputs.issue_title }}
+          
+          This summary was automatically generated when the feature was accepted.
+          
+          Related: #${{ steps.issue.outputs.issue_number }}"
+          
+          git push origin HEAD:feature-summary-${{ steps.issue.outputs.issue_number }}
+
+      - name: Create Pull Request
+        if: steps.check_files.outputs.summary_created == 'true'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const featureName = '${{ steps.issue.outputs.feature_name }}';
+            const issueNumber = '${{ steps.issue.outputs.issue_number }}';
+            const issueTitle = '${{ steps.issue.outputs.issue_title }}';
+            
+            const { data: pr } = await github.rest.pulls.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: `feat: Feature summary for #${issueNumber}`,
+              head: `feature-summary-${issueNumber}`,
+              base: 'main',
+              body: `## Feature Summary for Issue #${issueNumber}
+            
+            This PR adds the feature summary document for the accepted feature request.
+            
+            ### Summary
+            - **Feature:** ${issueTitle}
+            - **Location:** \`docs/features/${featureName}/summary.md\`
+            - **Source Issue:** #${issueNumber}
+            
+            ### Files Added
+            - \`docs/features/${featureName}/summary.md\` - Comprehensive feature summary
+            
+            ### Next Steps
+            After this PR is merged:
+            1. Review the feature summary for completeness
+            2. Create a feature breakdown (use \`feature-breakdown\` skill)
+            3. Plan implementation timeline (use \`feature-planning\` skill)
+            
+            ---
+            
+            Closes #${issueNumber}
+            
+            **Auto-generated by Feature Summary Generator workflow**`
+            });
+            
+            // Add labels to the PR
+            await github.rest.issues.addLabels({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: pr.number,
+              labels: ['documentation', 'enhancement', 'automated']
+            });
+            
+            // Comment on the original issue
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issueNumber,
+              body: `✅ **Feature summary has been generated!**
+            
+            A pull request has been created with the feature summary document: #${pr.number}
+            
+            📄 **Document Location:** \`docs/features/${featureName}/summary.md\`
+            
+            ### Next Steps:
+            1. Review the generated summary in PR #${pr.number}
+            2. Merge the PR to include it in the repository
+            3. Use the \`feature-breakdown\` skill to decompose into tasks
+            4. Use the \`feature-planning\` skill to create implementation sequence
+            
+            The feature summary will help guide the implementation of this feature.`
+            });
+
+      - name: Handle failure
+        if: failure()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: `⚠️ **Feature summary generation failed**
+            
+            The automated feature summary generation encountered an error. 
+            
+            ### Manual Steps:
+            You can manually create the feature summary by:
+            
+            1. Clone the repository
+            2. Run OpenCode with the feature-summary skill:
+               \`\`\`bash
+               opencode
+               # Then use: "Load the feature-summary skill and create a summary for issue #${{ steps.issue.outputs.issue_number }}"
+               \`\`\`
+            
+            3. Or manually create the document at:
+               \`docs/features/${{ steps.issue.outputs.feature_name }}/summary.md\`
+            
+            Check the [workflow run logs](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}) for details.`
+            });
