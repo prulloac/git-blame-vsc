@@ -133,4 +133,30 @@ suite('GutterAnnotationManager Test Suite', () => {
             await (manager as any).refresh(editor as any);
         });
     });
+
+    test('switching active editor clears decorations on the previous editor', () => {
+        const previousEditor = new MockEditor();
+        const nextEditor = new MockEditor();
+
+        // Simulate an active editor with decoration types set
+        const mockDecorationType = { dispose: () => {} };
+        (manager as any).activeEditor = previousEditor;
+        (manager as any).decorationType = mockDecorationType;
+        (manager as any).emptyDecorationType = mockDecorationType;
+        (manager as any).isVisible = false; // prevent refresh from running
+
+        // Simulate the onDidChangeActiveTextEditor callback firing
+        // Directly invoke clearDecorations with previousEditor to mirror the handler
+        (manager as any).activeEditor = nextEditor;
+        (manager as any).clearDecorations(previousEditor as any);
+
+        // previousEditor should have received two setDecorations calls with empty arrays
+        const emptyRangeCalls = previousEditor.setDecorationsCalls.filter(
+            c => Array.isArray(c.ranges) && (c.ranges as unknown[]).length === 0
+        );
+        assert.strictEqual(emptyRangeCalls.length, 2, 'Expected two empty-range setDecorations calls on the previous editor');
+
+        // nextEditor should have received no setDecorations calls
+        assert.strictEqual(nextEditor.setDecorationsCalls.length, 0, 'Expected no setDecorations calls on the next editor');
+    });
 });
