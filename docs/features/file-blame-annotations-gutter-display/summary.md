@@ -201,8 +201,8 @@ Users can bind `git-blame-vsc.toggleFileBlame` to a custom keybinding in `keybin
 
 | Aspect | Status |
 |--------|--------|
-| Core toggle commands | 📋 Planned |
-| Author display mode | 📋 Planned |
+| Core toggle commands | ✅ Implemented |
+| Author display mode | ✅ Implemented |
 | Date / hash display modes | 📋 Planned |
 | Color-by-author | 📋 Planned |
 | Recency heatmap | 📋 Planned (optional) |
