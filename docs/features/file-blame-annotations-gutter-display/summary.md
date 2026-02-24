@@ -9,9 +9,9 @@ Now I have enough context to write the comprehensive `summary.md`. Here it is:
 | Property | Value |
 |----------|-------|
 | **Feature Name** | File Blame Annotations (Gutter Display) |
-| **Status** | 📋 Planned |
+| **Status** | ✅ Implemented |
 | **Target Version** | v0.3.0 |
-| **Current Version** | v0.2.1 |
+| **Current Version** | v0.3.0 |
 | **Feature Type** | ⭐ Core Functionality · 🎨 Customization · 👥 User Experience |
 | **Related Feature** | [Git Blame Overlay](../git-blame-overlay/summary.md) |
 
@@ -201,10 +201,10 @@ Users can bind `git-blame-vsc.toggleFileBlame` to a custom keybinding in `keybin
 
 | Aspect | Status |
 |--------|--------|
-| Core toggle commands | 📋 Planned |
-| Author display mode | 📋 Planned |
-| Date / hash display modes | 📋 Planned |
-| Color-by-author | 📋 Planned |
+| Core toggle commands | ✅ Implemented |
+| Author display mode | ✅ Implemented |
+| Date / hash display modes | ✅ Implemented |
+| Color-by-author | ✅ Implemented |
 | Recency heatmap | 📋 Planned (optional) |
 | Theme integration | 📋 Planned (optional) |
 
