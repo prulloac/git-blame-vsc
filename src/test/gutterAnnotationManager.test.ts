@@ -54,4 +54,83 @@ suite('GutterAnnotationManager Test Suite', () => {
         // 'john@example.com' is 16 chars > 12
         assert.strictEqual((manager as any).formatAnnotation(sampleInfo), 'john@example…');
     });
+
+    class MockEditor {
+        public setDecorationsCalls: Array<{ type: unknown; ranges: unknown }> = [];
+        public document = {
+            uri: {
+                fsPath: '/path/to/file.txt',
+            },
+        };
+
+        // Simulate the VS Code TextEditor#setDecorations API
+        public setDecorations(type: unknown, ranges: unknown): void {
+            this.setDecorationsCalls.push({ type, ranges });
+        }
+    }
+
+    test('showFileBlame handles no blame data without throwing', async () => {
+        const mockBlameProvider = {
+            // Simulate a BlameProvider that returns no blame information
+            getBlameInfo: async () => {
+                return [];
+            },
+        } as any;
+
+        manager = new GutterAnnotationManager(config, mockBlameProvider);
+        const editor = new MockEditor();
+
+        await assert.doesNotReject(async () => {
+            await (manager as any).showFileBlame(editor as any);
+        });
+    });
+
+    test('hideFileBlame clears decorations without throwing', async () => {
+        const mockBlameProvider = {
+            getBlameInfo: async () => {
+                return [];
+            },
+        } as any;
+
+        manager = new GutterAnnotationManager(config, mockBlameProvider);
+        const editor = new MockEditor();
+
+        // First show blame to simulate an active state, then hide it
+        await (manager as any).showFileBlame(editor as any);
+        await assert.doesNotReject(async () => {
+            await (manager as any).hideFileBlame(editor as any);
+        });
+    });
+
+    test('toggleFileBlame toggles decorations without throwing when no blame data', async () => {
+        const mockBlameProvider = {
+            getBlameInfo: async () => {
+                return [];
+            },
+        } as any;
+
+        manager = new GutterAnnotationManager(config, mockBlameProvider);
+        const editor = new MockEditor();
+
+        // First toggle should show, second should hide; both should succeed
+        await assert.doesNotReject(async () => {
+            await (manager as any).toggleFileBlame(editor as any);
+            await (manager as any).toggleFileBlame(editor as any);
+        });
+    });
+
+    test('refresh does not throw when there is no blame data', async () => {
+        const mockBlameProvider = {
+            getBlameInfo: async () => {
+                return [];
+            },
+        } as any;
+
+        manager = new GutterAnnotationManager(config, mockBlameProvider);
+        const editor = new MockEditor();
+
+        await assert.doesNotReject(async () => {
+            await (manager as any).refresh(editor as any);
+        });
+    });
 });
