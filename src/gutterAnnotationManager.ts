@@ -12,6 +12,9 @@ export interface GutterAnnotationConfig {
 /** Fixed column width for all gutter annotations (in characters). */
 const GUTTER_WIDTH = 12;
 
+/** Debounce delay (ms) for refreshing annotations on text document changes. */
+const DEBOUNCE_DELAY_MS = 300;
+
 /**
  * Manages gutter annotations (file blame) displayed on the editor.
  */
@@ -23,6 +26,7 @@ export class GutterAnnotationManager {
     private emptyDecorationType: vscode.TextEditorDecorationType | undefined;
     private disposables: vscode.Disposable[] = [];
     private isVisible: boolean = false;
+    private debounceTimer: ReturnType<typeof setTimeout> | undefined;
 
     constructor(config: GutterAnnotationConfig, blameProvider: BlameProvider | null) {
         this.config = config;
@@ -45,12 +49,19 @@ export class GutterAnnotationManager {
                     this.refresh();
                 }
             }),
-            // Refresh on every edit so annotations stay up to date.
-            // The refresh clamps line numbers to the current document length,
-            // so stale cache entries never produce out-of-bounds decorations.
+            // Refresh on edit, debounced so rapid keystrokes don't each trigger
+            // a full re-render. The refresh clamps line numbers to the current
+            // document length, so stale cache entries never produce out-of-bounds
+            // decorations.
             vscode.workspace.onDidChangeTextDocument(event => {
                 if (this.isVisible && this.activeEditor && event.document === this.activeEditor.document) {
-                    this.refresh();
+                    if (this.debounceTimer !== undefined) {
+                        clearTimeout(this.debounceTimer);
+                    }
+                    this.debounceTimer = setTimeout(() => {
+                        this.debounceTimer = undefined;
+                        this.refresh();
+                    }, DEBOUNCE_DELAY_MS);
                 }
             }),
             // On save: invalidate the cache so the next refresh fetches fresh
@@ -272,6 +283,10 @@ export class GutterAnnotationManager {
      * Dispose of resources
      */
     public dispose(): void {
+        if (this.debounceTimer !== undefined) {
+            clearTimeout(this.debounceTimer);
+            this.debounceTimer = undefined;
+        }
         this.clear();
         this.disposables.forEach(d => d.dispose());
         this.disposables = [];
