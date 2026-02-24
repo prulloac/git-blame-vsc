@@ -233,7 +233,7 @@ export class GutterAnnotationManager {
         }
         // Truncate to GUTTER_WIDTH, appending ellipsis if cut; pad with spaces if shorter
         if (text.length > GUTTER_WIDTH) {
-            return text.substring(0, GUTTER_WIDTH - 1) + '…';
+            return text.substring(0, GUTTER_WIDTH) + '…';
         }
         return text.padEnd(GUTTER_WIDTH);
     }
