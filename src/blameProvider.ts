@@ -1,5 +1,12 @@
+import * as path from 'path';
+import { exec } from 'child_process';
+import { promisify } from 'util';
 import * as vscode from 'vscode';
-import { execSync } from 'child_process';
+
+const execAsync = promisify(exec);
+
+/** All-zeros hash git uses for lines that have not been committed yet. */
+const UNCOMMITTED_HASH = /^0+$/;
 
 /**
  * Represents blame information for a single line
@@ -15,50 +22,40 @@ export interface BlameInfo {
 }
 
 /**
- * Provides git blame information for files
+ * Provides git blame information for files using raw git CLI execution
  */
 export class BlameProvider {
 	private blameCache: Map<string, { data: string; timestamp: number }> = new Map();
 	private cacheExpiry = 30000; // 30 seconds
 
-	constructor() {
-		// No longer need to store gitAPI
+	/**
+	 * Get blame information for the entire file.
+	 * Lines that have not been committed yet are omitted from the result.
+	 */
+	public async getBlameForFile(filePath: string): Promise<BlameInfo[]> {
+		try {
+			const blameOutput = await this.getBlameOutput(filePath);
+			if (!blameOutput) {
+				return [];
+			}
+			return this.parseBlameOutput(blameOutput);
+		} catch (error) {
+			console.error('Error getting blame info for file:', error);
+			return [];
+		}
 	}
 
 	/**
-	 * Get blame information for a specific line in a file
+	 * Get blame information for a specific line in a file.
+	 * Returns null for uncommitted lines so callers show nothing.
 	 */
 	public async getBlameForLine(filePath: string, lineNumber: number): Promise<BlameInfo | null> {
 		try {
-			// Get the workspace folder for this file
-			const fileUri = vscode.Uri.file(filePath);
-			const workspaceFolder = vscode.workspace.getWorkspaceFolder(fileUri);
-
-			if (!workspaceFolder) {
-				console.debug('No workspace folder found for file:', filePath);
-				return null;
-			}
-
-			console.debug('Getting blame for:', filePath, 'line:', lineNumber);
-
-			// Get blame output for the file
-			const blameOutput = await this.getBlameOutput(workspaceFolder.uri.fsPath, filePath);
+			const blameOutput = await this.getBlameOutput(filePath);
 			if (!blameOutput) {
-				console.debug('No blame output received');
 				return null;
 			}
-
-			console.debug('Blame output length:', blameOutput.length, 'lines:', blameOutput.split('\n').length);
-
-			// Parse the blame output for the specific line
-			const lineBlame = this.parseBlameLineFromOutput(blameOutput, lineNumber);
-			if (!lineBlame) {
-				console.debug('Failed to parse blame for line:', lineNumber);
-				return null;
-			}
-
-			console.debug('Parsed blame:', lineBlame);
-			return lineBlame;
+			return this.parseBlameLineFromOutput(blameOutput, lineNumber);
 		} catch (error) {
 			console.error('Error getting blame info:', error);
 			return null;
@@ -66,166 +63,196 @@ export class BlameProvider {
 	}
 
 	/**
-	 * Get blame output for entire file (with caching)
+	 * Resolve the git repository root for a given file path.
 	 */
-	private async getBlameOutput(repoRoot: string, filePath: string): Promise<string | null> {
+	private async getRepoRoot(filePath: string): Promise<string | null> {
 		try {
-			// Convert absolute path to relative path from repo root
-			const relativePath = filePath
-				.replace(repoRoot + '/', '')
-				.replace(repoRoot + '\\', '')
-				.replace(/\\/g, '/');
-
-			console.debug('Repo root:', repoRoot);
-			console.debug('File path:', filePath);
-			console.debug('Relative path:', relativePath);
-
-			const cacheKey = `${repoRoot}:${relativePath}`;
-			const cached = this.blameCache.get(cacheKey);
-
-			// Return cached data if still valid
-			if (cached && Date.now() - cached.timestamp < this.cacheExpiry) {
-				console.debug('Using cached blame data');
-				return cached.data;
-			}
-
-			console.debug('Fetching blame output for:', relativePath);
-
-			// Run git blame command with --line-porcelain for structured output
-			const command = `cd "${repoRoot}" && git blame --line-porcelain "${relativePath}"`;
-			console.debug('Running command:', command);
-
-			let output: string;
-			try {
-				output = execSync(command, { encoding: 'utf-8', maxBuffer: 10 * 1024 * 1024 });
-			} catch (error: any) {
-				console.error('Git blame command failed:', error.message);
-				return null;
-			}
-
-			console.debug('Blame output received:', output ? output.length + ' chars' : 'null');
-
-			if (output) {
-				this.blameCache.set(cacheKey, { data: output, timestamp: Date.now() });
-			}
-			return output;
-		} catch (error) {
-			console.error('Error getting blame output:', error);
+			const { stdout } = await execAsync(
+				'git rev-parse --show-toplevel',
+				{ cwd: path.dirname(filePath) }
+			);
+			return stdout.trim();
+		} catch {
 			return null;
 		}
 	}
 
 	/**
-	 * Get the commit message for a commit hash
+	 * Run `git blame --line-porcelain` on a file and return the raw output (with caching).
+	 * Always runs from the repo root with a repo-relative path so git resolves the file
+	 * correctly regardless of where in the tree it lives.
 	 */
-	private async getCommitMessage(repoRoot: string, hash: string): Promise<string> {
+	private async getBlameOutput(filePath: string): Promise<string | null> {
+		const cacheKey = filePath;
+		const cached = this.blameCache.get(cacheKey);
+
+		if (cached && Date.now() - cached.timestamp < this.cacheExpiry) {
+			return cached.data;
+		}
+
 		try {
-			const command = `cd "${repoRoot}" && git log -1 --format=%s "${hash}"`;
-			console.debug('Getting commit message:', command);
-			const output = execSync(command, { encoding: 'utf-8' }).trim();
-			return output;
-		} catch (error) {
-			console.error('Error getting commit message:', error);
-			return '(no message)';
+			const repoRoot = await this.getRepoRoot(filePath);
+			if (!repoRoot) {
+				console.debug('Not inside a git repository:', filePath);
+				return null;
+			}
+
+			// Build a path relative to the repo root (git expects this)
+			const relativePath = path.relative(repoRoot, filePath).replace(/\\/g, '/');
+
+			const { stdout } = await execAsync(
+				`git blame --line-porcelain -- "${relativePath}"`,
+				{ cwd: repoRoot }
+			);
+
+			if (stdout) {
+				this.blameCache.set(cacheKey, { data: stdout, timestamp: Date.now() });
+			}
+			return stdout || null;
+		} catch (error: any) {
+			console.error('git blame command failed:', error.message);
+			return null;
 		}
 	}
 
 	/**
-	 * Parse a single line from git blame --line-porcelain output
-	 * Porcelain format provides structured data with each commit's info on separate lines
+	 * Parse a single line from git blame --line-porcelain output.
+	 * Returns null for uncommitted lines (all-zeros hash) or if the line is not found.
 	 */
 	private parseBlameLineFromOutput(output: string, lineNumber: number): BlameInfo | null {
 		const lines = output.split('\n');
-		
-		console.debug('Total lines in porcelain output:', lines.length);
-		console.debug('Looking for line number:', lineNumber + 1); // Git uses 1-indexed line numbers
 
-		// Parse porcelain format - each blame entry starts with hash and line numbers
-		// Format:
-		// <hash> <original-line> <final-line> <num-lines>
-		// author <name>
-		// author-mail <email>
-		// author-time <timestamp>
-		// author-tz <timezone>
-		// committer <name>
-		// committer-mail <email>
-		// committer-time <timestamp>
-		// committer-tz <timezone>
-		// summary <message>
-		// ... other fields ...
-		// \t<actual line content>
-		
 		let currentLineNum = 0;
 		let hash = '';
 		let author = '';
 		let authorEmail = '';
 		let authorTime = '';
 		let summary = '';
-		
+
 		for (let i = 0; i < lines.length; i++) {
 			const line = lines[i];
-			
-			// Check if this is the start of a new blame block
+
 			if (line.match(/^[a-f0-9]{40}\s+\d+\s+\d+/)) {
 				const parts = line.split(/\s+/);
 				hash = parts[0];
 				currentLineNum = parseInt(parts[2], 10) - 1; // Convert to 0-indexed
-				
-				// Reset fields for this block
+
 				author = '';
 				authorEmail = '';
 				authorTime = '';
 				summary = '';
-				
-				console.debug('Found blame block - hash:', hash, 'line:', currentLineNum);
-				
-				// Parse the metadata lines that follow
+
 				for (let j = i + 1; j < lines.length; j++) {
 					const metaLine = lines[j];
-					
-					// Stop when we hit the actual content line (starts with tab)
+
 					if (metaLine.startsWith('\t')) {
-						i = j; // Update outer loop position
+						i = j;
 						break;
 					}
-					
+
 					if (metaLine.startsWith('author ')) {
 						author = metaLine.substring(7);
 					} else if (metaLine.startsWith('author-mail ')) {
-						// Remove angle brackets from email
 						authorEmail = metaLine.substring(12).replace(/^<|>$/g, '');
 					} else if (metaLine.startsWith('author-time ')) {
 						const timestamp = parseInt(metaLine.substring(12), 10);
-						// Convert Unix timestamp to YYYY-MM-DD format
 						const date = new Date(timestamp * 1000);
-						authorTime = date.toISOString().substring(0, 10); // Get YYYY-MM-DD
+						authorTime = date.toISOString().substring(0, 10);
 					} else if (metaLine.startsWith('summary ')) {
 						summary = metaLine.substring(8);
 					}
 				}
-				
-				// Check if this is the line we're looking for
+
 				if (currentLineNum === lineNumber) {
+					// Uncommitted lines — show nothing
+					if (UNCOMMITTED_HASH.test(hash)) {
+						return null;
+					}
 					const authorShort = author.split(/\s+/)[0];
-					
-					console.debug('Found target line!');
-					console.debug('Parsed - hash:', hash, 'author:', author, 'email:', authorEmail, 'short:', authorShort, 'date:', authorTime);
-					
 					return {
-						hash: hash, // Keep full hash for now, we'll handle short hash in the formatter
-						author: author,
-						authorEmail: authorEmail,
-						authorShort: authorShort,
+						hash,
+						author,
+						authorEmail,
+						authorShort,
 						date: authorTime,
 						message: summary,
-						lineNumber: lineNumber,
+						lineNumber,
 					};
 				}
 			}
 		}
-		
-		console.debug('Line not found in blame output');
+
 		return null;
+	}
+
+	/**
+	 * Parse the entire git blame --line-porcelain output into an array of BlameInfo objects.
+	 * Uncommitted lines (all-zeros hash) are omitted.
+	 */
+	private parseBlameOutput(output: string): BlameInfo[] {
+		const lines = output.split('\n');
+		const blameInfos: BlameInfo[] = [];
+
+		let currentLineNum = 0;
+		let hash = '';
+		let author = '';
+		let authorEmail = '';
+		let authorTime = '';
+		let summary = '';
+
+		for (let i = 0; i < lines.length; i++) {
+			const line = lines[i];
+
+			if (line.match(/^[a-f0-9]{40}\s+\d+\s+\d+/)) {
+				const parts = line.split(/\s+/);
+				hash = parts[0];
+				currentLineNum = parseInt(parts[2], 10) - 1;
+
+				author = '';
+				authorEmail = '';
+				authorTime = '';
+				summary = '';
+
+				for (let j = i + 1; j < lines.length; j++) {
+					const metaLine = lines[j];
+
+					if (metaLine.startsWith('\t')) {
+						i = j;
+						break;
+					}
+
+					if (metaLine.startsWith('author ')) {
+						author = metaLine.substring(7);
+					} else if (metaLine.startsWith('author-mail ')) {
+						authorEmail = metaLine.substring(12).replace(/^<|>$/g, '');
+					} else if (metaLine.startsWith('author-time ')) {
+						const timestamp = parseInt(metaLine.substring(12), 10);
+						const date = new Date(timestamp * 1000);
+						authorTime = date.toISOString().substring(0, 10);
+					} else if (metaLine.startsWith('summary ')) {
+						summary = metaLine.substring(8);
+					}
+				}
+
+				// Skip uncommitted lines — show nothing for those
+				if (UNCOMMITTED_HASH.test(hash)) {
+					continue;
+				}
+
+				const authorShort = author.split(/\s+/)[0];
+				blameInfos.push({
+					hash,
+					author,
+					authorEmail,
+					authorShort,
+					date: authorTime,
+					message: summary,
+					lineNumber: currentLineNum,
+				});
+			}
+		}
+
+		return blameInfos;
 	}
 
 	/**
@@ -234,5 +261,11 @@ export class BlameProvider {
 	public clearCache(): void {
 		this.blameCache.clear();
 	}
-}
 
+	/**
+	 * Invalidate cache for a specific file
+	 */
+	public invalidateFile(filePath: string): void {
+		this.blameCache.delete(filePath);
+	}
+}
