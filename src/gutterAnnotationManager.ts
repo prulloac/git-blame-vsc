@@ -136,6 +136,7 @@ export class GutterAnnotationManager {
             
             if (blameData.length === 0) {
                 console.debug('No blame data found for file');
+                this.clearDecorations();
                 return;
             }
 
