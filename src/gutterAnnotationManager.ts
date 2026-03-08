@@ -107,7 +107,7 @@ export class GutterAnnotationManager {
     public async showFileBlame(): Promise<void> {
         this.isVisible = true;
         await vscode.workspace.getConfiguration('gitBlameOverlay').update('gutterEnabled', true, this.getConfigurationTarget());
-        await this.refresh();
+        // Refresh will be triggered by the configuration change handler (updateConfig)
     }
 
     /**
