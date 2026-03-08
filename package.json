@@ -7,7 +7,7 @@
     "url": "https://github.com/prulloac/git-blame-vsc.git"
   },
   "publisher": "prulloac",
-  "version": "0.2.1",
+  "version": "0.3.0",
   "icon": "media/icon.png",
   "license": "MIT",
   "keywords": [
@@ -21,6 +21,9 @@
   "engines": {
     "vscode": "^1.109.0"
   },
+  "extensionDependencies": [
+    "vscode.git"
+  ],
   "categories": [
     "SCM Providers"
   ],
@@ -43,6 +46,21 @@
       {
         "command": "git-blame-vsc.copyCommitHash",
         "title": "Git Blame: Copy Commit Hash",
+        "category": "Git Blame"
+      },
+      {
+        "command": "git-blame-vsc.showFileBlame",
+        "title": "Git Blame: Show File Blame",
+        "category": "Git Blame"
+      },
+      {
+        "command": "git-blame-vsc.hideFileBlame",
+        "title": "Git Blame: Hide File Blame",
+        "category": "Git Blame"
+      },
+      {
+        "command": "git-blame-vsc.toggleFileBlame",
+        "title": "Git Blame: Toggle File Blame",
         "category": "Git Blame"
       }
     ],
@@ -115,12 +133,25 @@
           "default": true,
           "description": "Enable/disable hover tooltips with git blame information. When enabled, hovering over a line shows detailed commit information."
         },
-        "gitBlameOverlay.hoverDelay": {
-          "type": "number",
-          "default": 2000,
-          "minimum": 0,
-          "maximum": 5000,
-          "description": "Delay in milliseconds before showing the hover tooltip. Default is 2000ms (2 seconds). Set to 0 for instant display, or adjust for your preferred delay."
+        "gitBlameOverlay.gutterEnabled": {
+          "type": "boolean",
+          "default": false,
+          "description": "Enable/disable gutter blame annotations."
+        },
+        "gitBlameOverlay.gutterAuthorFormat": {
+          "type": "string",
+          "enum": [
+            "initials",
+            "fullName",
+            "email"
+          ],
+          "enumDescriptions": [
+            "Show author initials (e.g. JD)",
+            "Show author full name (e.g. Jane Doe)",
+            "Show author email address"
+          ],
+          "default": "email",
+          "description": "Format for the author name shown in gutter annotations."
         }
       }
     }

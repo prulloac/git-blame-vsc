@@ -5,10 +5,12 @@ import { OverlayManager, OverlayConfig } from './overlayManager';
 import { BlameProvider } from './blameProvider';
 import { StatusBarManager } from './statusBarManager';
 import { BlameHoverProvider } from './blameHoverProvider';
+import { GutterAnnotationManager, GutterAnnotationConfig } from './gutterAnnotationManager';
 
 let overlayManager: OverlayManager | null = null;
 let blameProvider: BlameProvider | null = null;
 let statusBarManager: StatusBarManager | null = null;
+let gutterAnnotationManager: GutterAnnotationManager | null = null;
 
 /**
  * Get current configuration from VS Code settings
@@ -39,17 +41,24 @@ function getBlameFormatConfig(): { pattern: string; maxMessageLength: number } {
 }
 
 /**
- * Initialize git blame provider
+ * Get gutter annotation configuration
  */
-async function initializeBlameProvider(): Promise<BlameProvider | null> {
-	try {
-		// Just create the blame provider - it uses git command directly
-		return new BlameProvider();
-	} catch (error) {
-		console.error('Failed to initialize blame provider:', error);
-		return null;
-	}
+function getGutterAnnotationConfig(): GutterAnnotationConfig {
+	const config = vscode.workspace.getConfiguration('gitBlameOverlay');
+
+	const validAuthorFormats: GutterAnnotationConfig['authorFormat'][] = ['initials', 'fullName', 'email'];
+	const rawAuthorFormat = config.get<string>('gutterAuthorFormat', 'email');
+	const authorFormat: GutterAnnotationConfig['authorFormat'] = (validAuthorFormats as string[]).includes(rawAuthorFormat)
+		? rawAuthorFormat as GutterAnnotationConfig['authorFormat']
+		: 'initials';
+
+	return {
+		enabled: config.get<boolean>('gutterEnabled', false),
+		authorFormat,
+	};
 }
+
+
 
 /**
  * Format blame information using configurable pattern
@@ -95,11 +104,11 @@ export async function activate(context: vscode.ExtensionContext) {
 	const config = vscode.workspace.getConfiguration('gitBlameOverlay');
 	statusBarManager = new StatusBarManager(config.get('statusBarEnabled', false));
 
-	// Initialize BlameProvider
-	blameProvider = await initializeBlameProvider();
-	if (!blameProvider) {
-		console.log('Git blame feature unavailable');
-	}
+	// Initialize BlameProvider using raw git CLI
+	blameProvider = new BlameProvider();
+
+	// Initialize GutterAnnotationManager
+	gutterAnnotationManager = new GutterAnnotationManager(getGutterAnnotationConfig(), blameProvider);
 
 	// Register hover provider for rich blame tooltips (if enabled)
 	let hoverDisposable: vscode.Disposable | null = null;
@@ -171,6 +180,25 @@ export async function activate(context: vscode.ExtensionContext) {
 		}
 	});
 
+	// Register file blame commands
+	const showFileBlameDisposable = vscode.commands.registerCommand('git-blame-vsc.showFileBlame', () => {
+		if (gutterAnnotationManager) {
+			gutterAnnotationManager.showFileBlame();
+		}
+	});
+
+	const hideFileBlameDisposable = vscode.commands.registerCommand('git-blame-vsc.hideFileBlame', () => {
+		if (gutterAnnotationManager) {
+			gutterAnnotationManager.hideFileBlame();
+		}
+	});
+
+	const toggleFileBlameDisposable = vscode.commands.registerCommand('git-blame-vsc.toggleFileBlame', () => {
+		if (gutterAnnotationManager) {
+			gutterAnnotationManager.toggleFileBlame();
+		}
+	});
+
 	// Listen for editor click events to show overlay
 	const editorClickDisposable = vscode.window.onDidChangeTextEditorSelection((event) => {
 		if (!overlayManager) {
@@ -237,6 +265,11 @@ export async function activate(context: vscode.ExtensionContext) {
 			if (overlayManager) {
 				overlayManager.updateConfig(getOverlayConfig());
 			}
+
+			// Update gutter annotation config
+			if (gutterAnnotationManager) {
+				gutterAnnotationManager.updateConfig(getGutterAnnotationConfig());
+			}
 			
 			// Update status bar enabled state
 			if (event.affectsConfiguration('gitBlameOverlay.statusBarEnabled') && statusBarManager) {
@@ -271,7 +304,10 @@ export async function activate(context: vscode.ExtensionContext) {
 		clearOverlayDisposable,
 		copyCommitHashDisposable,
 		editorClickDisposable,
-		configChangeDisposable
+		configChangeDisposable,
+		showFileBlameDisposable,
+		hideFileBlameDisposable,
+		toggleFileBlameDisposable
 	);
 
 	// Dispose of overlay manager when extension is deactivated
@@ -288,6 +324,10 @@ export async function activate(context: vscode.ExtensionContext) {
 			if (blameProvider) {
 				blameProvider.clearCache();
 				blameProvider = null;
+			}
+			if (gutterAnnotationManager) {
+				gutterAnnotationManager.dispose();
+				gutterAnnotationManager = null;
 			}
 		}
 	});
@@ -306,5 +346,9 @@ export function deactivate() {
 	if (blameProvider) {
 		blameProvider.clearCache();
 		blameProvider = null;
+	}
+	if (gutterAnnotationManager) {
+		gutterAnnotationManager.dispose();
+		gutterAnnotationManager = null;
 	}
 }
