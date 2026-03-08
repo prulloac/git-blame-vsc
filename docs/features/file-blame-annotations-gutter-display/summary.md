@@ -1,5 +1,3 @@
-Now I have enough context to write the comprehensive `summary.md`. Here it is:
-
 ---
 
 # File Blame Annotations (Gutter Display)
