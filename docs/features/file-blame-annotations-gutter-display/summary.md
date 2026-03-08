@@ -1,5 +1,3 @@
----
-
 # File Blame Annotations (Gutter Display)
 
 ## Overview
