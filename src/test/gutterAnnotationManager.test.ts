@@ -134,6 +134,40 @@ suite('GutterAnnotationManager Test Suite', () => {
         });
     });
 
+    test('switching active editor clears decorations on the previous editor', async () => {
+        const mockBlameProvider = {
+            getBlameInfo: async () => {
+                return [];
+            },
+        } as any;
+
+        manager = new GutterAnnotationManager(config, mockBlameProvider);
+
+        class TrackingEditor extends MockEditor {
+            public clearDecorationsCalls = 0;
+
+            clearDecorations() {
+                this.clearDecorationsCalls++;
+                // Call the base implementation (if any) to preserve behavior
+                super.clearDecorations();
+            }
+        }
+
+        const firstEditor = new TrackingEditor();
+        const secondEditor = new TrackingEditor();
+
+        // Show blame in the first editor to simulate it being the active editor
+        await (manager as any).showFileBlame(firstEditor as any);
+
+        // Now show blame in the second editor; this should clear decorations on the first
+        await (manager as any).showFileBlame(secondEditor as any);
+
+        assert.ok(
+            firstEditor.clearDecorationsCalls >= 1,
+            'Expected clearDecorations to be called on the previous editor when switching active editors',
+        );
+    });
+
     test('switching active editor clears decorations on the previous editor', () => {
         const previousEditor = new MockEditor();
         const nextEditor = new MockEditor();
