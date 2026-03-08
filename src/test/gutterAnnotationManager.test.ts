@@ -148,8 +148,6 @@ suite('GutterAnnotationManager Test Suite', () => {
 
             clearDecorations() {
                 this.clearDecorationsCalls++;
-                // Call the base implementation (if any) to preserve behavior
-                super.clearDecorations();
             }
         }
 
