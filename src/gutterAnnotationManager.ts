@@ -105,29 +105,41 @@ export class GutterAnnotationManager {
      * Show file blame annotations
      */
     public async showFileBlame(): Promise<void> {
+        await vscode.workspace.getConfiguration('gitBlameOverlay').update('gutterEnabled', true, this.getConfigurationTarget());
         this.isVisible = true;
-        this.config.enabled = true;
-        await this.refresh();
+        // Refresh is normally triggered by the configuration change handler (updateConfig),
+        // but call refresh here as a fallback in case no configuration change event is fired.
+        this.refresh();
     }
 
     /**
      * Hide file blame annotations
      */
-    public hideFileBlame(): void {
+    public async hideFileBlame(): Promise<void> {
+        await vscode.workspace.getConfiguration('gitBlameOverlay').update('gutterEnabled', false, this.getConfigurationTarget());
         this.isVisible = false;
-        this.config.enabled = false;
         this.clear();
     }
 
     /**
      * Toggle file blame annotations
      */
-    public toggleFileBlame(): void {
+    public async toggleFileBlame(): Promise<void> {
         if (this.isVisible) {
-            this.hideFileBlame();
+            await this.hideFileBlame();
         } else {
-            this.showFileBlame();
+            await this.showFileBlame();
         }
+    }
+
+    /**
+     * Returns the appropriate VS Code configuration target:
+     * workspace when a workspace folder is open, otherwise global (user) settings.
+     */
+    private getConfigurationTarget(): vscode.ConfigurationTarget {
+        return vscode.workspace.workspaceFolders?.length
+            ? vscode.ConfigurationTarget.Workspace
+            : vscode.ConfigurationTarget.Global;
     }
 
     /**

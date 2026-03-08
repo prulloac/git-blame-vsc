@@ -181,21 +181,33 @@ export async function activate(context: vscode.ExtensionContext) {
 	});
 
 	// Register file blame commands
-	const showFileBlameDisposable = vscode.commands.registerCommand('git-blame-vsc.showFileBlame', () => {
+	const showFileBlameDisposable = vscode.commands.registerCommand('git-blame-vsc.showFileBlame', async () => {
 		if (gutterAnnotationManager) {
-			gutterAnnotationManager.showFileBlame();
+			try {
+				await gutterAnnotationManager.showFileBlame();
+			} catch (error) {
+				vscode.window.showErrorMessage('Git Blame: Failed to show file blame annotations.');
+			}
 		}
 	});
 
-	const hideFileBlameDisposable = vscode.commands.registerCommand('git-blame-vsc.hideFileBlame', () => {
+	const hideFileBlameDisposable = vscode.commands.registerCommand('git-blame-vsc.hideFileBlame', async () => {
 		if (gutterAnnotationManager) {
-			gutterAnnotationManager.hideFileBlame();
+			try {
+				await gutterAnnotationManager.hideFileBlame();
+			} catch (error) {
+				vscode.window.showErrorMessage('Git Blame: Failed to hide file blame annotations.');
+			}
 		}
 	});
 
-	const toggleFileBlameDisposable = vscode.commands.registerCommand('git-blame-vsc.toggleFileBlame', () => {
+	const toggleFileBlameDisposable = vscode.commands.registerCommand('git-blame-vsc.toggleFileBlame', async () => {
 		if (gutterAnnotationManager) {
-			gutterAnnotationManager.toggleFileBlame();
+			try {
+				await gutterAnnotationManager.toggleFileBlame();
+			} catch (error) {
+				vscode.window.showErrorMessage('Git Blame: Failed to toggle file blame annotations.');
+			}
 		}
 	});
 
