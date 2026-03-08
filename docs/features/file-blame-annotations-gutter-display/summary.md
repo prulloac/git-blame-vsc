@@ -31,7 +31,7 @@ Modern development teams work with large, long-lived codebases where understandi
 
 ### Core Behavior
 
-When activated, the extension decorates every line of the active editor with a compact blame annotation in the gutter. Each annotation shows configurable information (author, date, commit hash, or combinations) so developers can scan the entire file's history in a single glance.
+When activated, the extension decorates every line of the active editor with a compact blame annotation in the gutter. Each annotation shows the author's name (configurable as initials, full name, or email) so developers can scan the entire file's authorship in a single glance.
 
 **Before activation:**
 ```
@@ -40,11 +40,11 @@ When activated, the extension decorates every line of the active editor with a c
 3  | }
 ```
 
-**After activation (default: author short-name):**
+**After activation (default: email):**
 ```
-john    1  | function calculateTotal(items) {
-sarah   2  |   return items.reduce((sum, item) => sum + item.price, 0);
-john    3  | }
+john@example…  1  | function calculateTotal(items) {
+sarah@corp…    2  |   return items.reduce((sum, item) => sum + item.price, 0);
+john@example…  3  | }
 ```
 
 ### User Experience
@@ -55,7 +55,7 @@ john    3  | }
 4. Navigate the file normally — annotations stay in place.
 5. Run **Git Blame: Hide File Blame** or **Git Blame: Toggle File Blame** to dismiss.
 
-Annotations adapt to the current VS Code theme automatically and respect the extension's existing opacity, color, and font-weight settings.
+Annotations use `editorCodeLens.foreground` for text color and `editorGutter.background` for background, adapting automatically to the active VS Code theme.
 
 ---
 
@@ -68,58 +68,41 @@ Annotations adapt to the current VS Code theme automatically and respect the ext
 | **Toggle commands** | `showFileBlame`, `hideFileBlame`, and `toggleFileBlame` for explicit and keyboard-shortcut-friendly control |
 | **Full-file coverage** | Decorates every line in a single batch VS Code decoration call |
 | **Cache reuse** | Reuses `BlameProvider`'s 30-second full-file blame cache — no redundant `git blame` processes |
-| **Multiple display modes** | Author names, dates, commit hashes, or any combination via a configurable pattern |
+| **Author display** | Author identity rendered in a fixed-width gutter column (12 characters), configurable as initials, full name, or email |
+| **Debounced refresh** | Annotations are refreshed 300 ms after a text-document change, preventing excessive re-renders during typing |
 
 ### Display Format Options
 
 | Option | Values | Example Output |
 |--------|--------|----------------|
-| **Author format** | `full`, `short`, `initials` | `Jonathan Smith` / `j.smith` / `JS` |
-| **Date format** | `YYYY-MM-DD`, `MM-DD` | `2024-03-15` / `03-15` |
-| **Commit hash** | 7-character short hash | `a1b2c3d` |
-| **Custom pattern** | Configurable string | `a1b2c3d · j.smith` |
-
-### Visual Enhancements (Optional)
-
-| Enhancement | Description |
-|-------------|-------------|
-| **Color-coding by author** | Each contributor receives a distinct gutter color, making contribution zones instantly recognisable |
-| **Recency heatmap** | Older commits fade out; recent commits appear more prominently, revealing the file's evolution at a glance |
-| **Theme integration** | Colors are derived from the active VS Code theme to avoid visual clashes |
+| **Author format** | `initials` \| `fullName` \| `email` | `JD` / `John Doe` / `john@example.com` |
 
 ### Extended Functionality
 
 - Works alongside (and independently from) the existing single-line inline overlay.
-- Annotations are cleared automatically when the file is closed or the workspace changes.
-- Gracefully handles uncommitted lines (e.g., new unsaved content) without error.
+- Annotations are cleared automatically when switching to another editor (stale decorations are removed from the previous editor).
+- Annotations are refreshed automatically when the file is saved (cache is invalidated first so fresh `git blame` data is fetched).
+- Gracefully handles uncommitted lines (e.g., new unsaved content) without error — those lines receive an empty gutter placeholder.
 
 ---
 
 ## Configuration
 
-All settings live under the `gitBlameOverlay.gutterAnnotations` namespace and can be placed in workspace or user `settings.json`.
+All gutter annotation settings live under the `gitBlameOverlay` namespace in workspace or user `settings.json`.
 
 ```json
 {
-  "gitBlameOverlay.gutterAnnotations.enabled": false,
-  "gitBlameOverlay.gutterAnnotations.displayMode": "author",
-  "gitBlameOverlay.gutterAnnotations.authorFormat": "short",
-  "gitBlameOverlay.gutterAnnotations.dateFormat": "YYYY-MM-DD",
-  "gitBlameOverlay.gutterAnnotations.colorByAuthor": true,
-  "gitBlameOverlay.gutterAnnotations.fadeByAge": false
+  "gitBlameOverlay.gutterEnabled": false,
+  "gitBlameOverlay.gutterAuthorFormat": "email"
 }
 ```
 
 | Setting | Type | Default | Description |
 |---------|------|---------|-------------|
-| `enabled` | `boolean` | `false` | Show gutter annotations automatically on file open |
-| `displayMode` | `"author" \| "date" \| "hash" \| "custom"` | `"author"` | What information to show in the gutter |
-| `authorFormat` | `"full" \| "short" \| "initials"` | `"short"` | How to format the author name |
-| `dateFormat` | `"YYYY-MM-DD" \| "MM-DD"` | `"YYYY-MM-DD"` | Date display format |
-| `colorByAuthor` | `boolean` | `true` | Assign unique colors per contributor |
-| `fadeByAge` | `boolean` | `false` | Fade older commits for a recency heatmap effect |
+| `gitBlameOverlay.gutterEnabled` | `boolean` | `false` | Show gutter annotations automatically on file open |
+| `gitBlameOverlay.gutterAuthorFormat` | `"initials" \| "fullName" \| "email"` | `"email"` | How to format the author identity in the gutter |
 
-> **Tip**: Combine `displayMode: "custom"` with the existing `gitBlameOverlay.outputPattern` variables (`<hash>`, `<author>`, `<date>`) for fully bespoke gutter text.
+> **Tip**: The `initials` format produces the most compact annotations (e.g. `JD`), while `email` is the most precise identifier. Annotations are always padded or truncated to a fixed 12-character width so columns stay aligned.
 
 ---
 
@@ -134,26 +117,25 @@ extension.ts          ← registers showFileBlame / hideFileBlame / toggleFileBl
      │
      └──► GutterAnnotationManager (new)
                │
-               ├──► BlameProvider.getBlameOutput()   ← reuses existing 30-sec cache
+               ├──► BlameProvider.getBlameForFile()  ← reuses existing 30-sec cache
                └──► vscode.TextEditorDecorationType  ← batch-sets decorations for all lines
 ```
 
 ### Key Source Files
 
-| File | Role | Change Required |
-|------|------|-----------------|
-| [`src/extension.ts`](../../src/extension.ts) | Command registration and activation | Register three new commands |
-| [`src/blameProvider.ts`](../../src/blameProvider.ts) | Full-file `git blame` output + 30s cache | No changes needed — already exposes `getBlameOutput()` |
-| [`src/overlayManager.ts`](../../src/overlayManager.ts) | Single-line inline decoration management | Minor: export decoration helpers or serve as reference |
-| `src/gutterAnnotationManager.ts` *(new)* | Batch gutter decoration lifecycle management | New file |
+| File | Role |
+|------|------|
+| [`src/extension.ts`](../../src/extension.ts) | Command registration, activation, and config change handler (`onDidChangeConfiguration` → `updateConfig()`) |
+| [`src/blameProvider.ts`](../../src/blameProvider.ts) | Full-file `git blame` output + 30 s cache (`getBlameForFile()`) |
+| [`src/gutterAnnotationManager.ts`](../../src/gutterAnnotationManager.ts) | Batch gutter decoration lifecycle: show/hide/toggle, debounced refresh, editor-switch cleanup |
 
 ### Implementation Notes
 
-- **Decoration strategy**: Use VS Code's `before` content decoration option (or `gutterIconPath` for icon-based annotations) with `rangeBehavior: ClosedClosed` to anchor decorations to each line.
-- **Batch operation**: Call `editor.setDecorations(decorationType, allLineDecorations)` once per activation — avoids per-line overhead.
-- **Author color mapping**: Maintain a `Map<string, string>` of `authorName → cssColor` seeded from a fixed accessible palette; persist across toggle cycles within a session.
-- **Heatmap calculation**: Normalise commit timestamps across the file to a 0–1 opacity scale before applying decorations.
-- **Estimated effort**: 3–4 hours.
+- **Decoration strategy**: Uses VS Code's `before` content decoration with `rangeBehavior: ClosedClosed` to anchor each annotation to its line. A separate `emptyDecorationType` fills gutter space for lines without blame data, keeping alignment consistent.
+- **Batch operation**: Calls `editor.setDecorations(decorationType, allLineDecorations)` once per activation — avoids per-line overhead.
+- **Author format**: Annotations are always padded or truncated to a fixed 12-character gutter width (`GUTTER_WIDTH = 12`). Text longer than 12 characters is truncated with a `…` suffix.
+- **Debounce**: Text-document change events are debounced at 300 ms (`DEBOUNCE_DELAY_MS`) to avoid per-keystroke re-renders.
+- **Cache invalidation**: On file save, `BlameProvider.invalidateFile()` is called so the next refresh fetches fresh `git blame` output.
 
 ---
 
@@ -227,5 +209,4 @@ Users can bind `git-blame-vsc.toggleFileBlame` to a custom keybinding in `keybin
 |---------|--------------|
 | [Git Blame Overlay](../git-blame-overlay/summary.md) | **Parent feature** — this extends the single-line inline overlay to full-file gutter coverage |
 | [Performance Optimization](../performance-optimization/summary.md) | **Dependency** — the 30-second `BlameProvider` cache is the performance foundation for gutter annotations |
-| Output Pattern Customization | **Sibling** — the existing `gitBlameOverlay.outputPattern` system provides the template syntax reused by `displayMode: "custom"` |
 

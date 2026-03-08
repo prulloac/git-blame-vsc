@@ -132,6 +132,8 @@ suite('GutterAnnotationManager Test Suite', () => {
         await assert.doesNotReject(async () => {
             await (manager as any).refresh(editor as any);
         });
+    });
+
     test('switching active editor clears decorations on the previous editor', () => {
         const previousEditor = new MockEditor();
         const nextEditor = new MockEditor();
