@@ -1,4 +1,3 @@
-Now I have enough context. Let me generate the `summary.md` content:
 
 # Commit Details View
 
