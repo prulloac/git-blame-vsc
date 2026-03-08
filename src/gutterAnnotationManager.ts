@@ -44,7 +44,13 @@ export class GutterAnnotationManager {
         // Listen for active editor changes to re-apply if enabled
         this.disposables.push(
             vscode.window.onDidChangeActiveTextEditor(editor => {
+                const previousEditor = this.activeEditor;
                 this.activeEditor = editor;
+                // Clear decorations from the previous editor to avoid stale
+                // annotations when the same document is open in multiple editor groups.
+                if (previousEditor) {
+                    this.clearDecorations(previousEditor);
+                }
                 if (this.isVisible && this.activeEditor) {
                     this.refresh();
                 }
@@ -251,17 +257,19 @@ export class GutterAnnotationManager {
     }
 
     /**
-     * Clear all decoration ranges from the active editor without disposing
-     * the decoration type objects. This is cheap and avoids stale annotations
-     * while the user is editing (before the next save + refresh).
+     * Clear all decoration ranges from the given editor (or the active editor
+     * if none is provided) without disposing the decoration type objects.
+     * This is cheap and avoids stale annotations while the user is editing
+     * (before the next save + refresh) or when switching between editors.
      */
-    private clearDecorations(): void {
-        if (this.activeEditor) {
+    private clearDecorations(editor?: vscode.TextEditor): void {
+        const target = editor ?? this.activeEditor;
+        if (target) {
             if (this.decorationType) {
-                this.activeEditor.setDecorations(this.decorationType, []);
+                target.setDecorations(this.decorationType, []);
             }
             if (this.emptyDecorationType) {
-                this.activeEditor.setDecorations(this.emptyDecorationType, []);
+                target.setDecorations(this.emptyDecorationType, []);
             }
         }
     }
